@@ -42,6 +42,14 @@ def is_allowed_file(filename: str) -> bool:
     """Check if file extension is allowed."""
     return get_file_extension(filename) in ALLOWED_EXTENSIONS
 
+def is_safe_filename(filename: str) -> bool:
+    """Check if filename is safe (no path traversal)."""
+    if not filename or '..' in filename or '/' in filename or '\\' in filename:
+        return False
+    if filename.startswith('.') or filename.endswith('.'):
+        return False
+    return len(filename) <= 255 and filename.isprintable()
+
 def get_image_dimensions(file_path: str) -> tuple:
     """Get image dimensions."""
     try:
@@ -76,15 +84,33 @@ async def upload_file(
             detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
         )
     
-    # Check file size
+    # Check file size by streaming to avoid memory issues
     file_size = 0
-    content = await file.read()
-    file_size = len(content)
-    
-    if file_size > MAX_FILE_SIZE:
+    content_chunks = []
+
+    # Read file in chunks to avoid loading large files into memory
+    while True:
+        chunk = await file.read(8192)  # 8KB chunks
+        if not chunk:
+            break
+        content_chunks.append(chunk)
+        file_size += len(chunk)
+
+        # Check size limit during streaming
+        if file_size > 50 * 1024 * 1024:  # 50MB limit
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="File too large. Maximum size is 50MB."
+            )
+
+    content = b''.join(content_chunks)
+
+    # Validate file content for security
+    from app.core.security import validate_file_upload
+    if not validate_file_upload(content, file.filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB"
+            detail="Invalid file content or potentially malicious file"
         )
     
     # Create user directory
@@ -166,26 +192,54 @@ async def get_file(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific file."""
-    
+
+    # Validate filename to prevent path traversal
+    if not is_safe_filename(filename):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid filename"
+        )
+
     user_dir = settings.MEDIA_DIR / str(current_user.id)
     file_path = user_dir / filename
-    
+
+    # Ensure the resolved path is within the user directory
+    try:
+        file_path = file_path.resolve()
+        user_dir = user_dir.resolve()
+        if not str(file_path).startswith(str(user_dir)):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+    except (OSError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file path"
+        )
+
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"
         )
-    
+
     if not is_allowed_file(filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File type not allowed"
         )
-    
+
+    import mimetypes
+
+    mime_type, _ = mimetypes.guess_type(filename)
+    if mime_type is None:
+        mime_type = "application/octet-stream"
+
     return FileResponse(
         path=str(file_path),
         filename=filename,
-        media_type="application/octet-stream"
+        media_type=mime_type
     )
 
 @router.delete("/files/{filename}")
@@ -194,16 +248,38 @@ async def delete_file(
     current_user: User = Depends(get_current_active_user)
 ):
     """Delete a file."""
-    
+
+    # Validate filename to prevent path traversal
+    if not is_safe_filename(filename):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid filename"
+        )
+
     user_dir = settings.MEDIA_DIR / str(current_user.id)
     file_path = user_dir / filename
-    
+
+    # Ensure the resolved path is within the user directory
+    try:
+        file_path = file_path.resolve()
+        user_dir = user_dir.resolve()
+        if not str(file_path).startswith(str(user_dir)):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+    except (OSError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file path"
+        )
+
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"
         )
-    
+
     try:
         file_path.unlink()
         return {"message": "File deleted successfully"}

@@ -5,9 +5,30 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     # API Configuration
-    SECRET_KEY: str = "your-secret-key-change-this-in-production"
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    def __post_init__(self):
+        """Validate critical settings after initialization."""
+        if not self.SECRET_KEY or len(self.SECRET_KEY) < 32:
+            import secrets
+            self.SECRET_KEY = secrets.token_urlsafe(32)
+            print("WARNING: Using auto-generated SECRET_KEY. Set SECRET_KEY environment variable for production.")
+
+        # Validate other critical settings
+        if self.ACCESS_TOKEN_EXPIRE_MINUTES < 5:
+            print("WARNING: ACCESS_TOKEN_EXPIRE_MINUTES is very low. Consider increasing for better UX.")
+
+        # Ensure media directory exists and is secure
+        self.MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Set secure permissions on media directory (Unix only)
+        try:
+            import stat
+            self.MEDIA_DIR.chmod(stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)  # 750
+        except (OSError, AttributeError):
+            pass  # Windows or permission error
     
     # Database
     DATABASE_URL: str = "sqlite:///./database.db"

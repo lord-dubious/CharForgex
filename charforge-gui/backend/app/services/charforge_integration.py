@@ -61,34 +61,148 @@ class CharForgeIntegration:
             'FAL_KEY': env_vars.get('FAL_KEY', ''),
         })
         return env
+
+    def _validate_config(self, config) -> bool:
+        """Validate configuration parameters to prevent injection attacks."""
+        try:
+            # Validate numeric parameters
+            if not (1 <= int(config.steps) <= 10000):
+                return False
+            if not (1 <= int(config.batch_size) <= 32):
+                return False
+            if not (0.0001 <= float(config.learning_rate) <= 1.0):
+                return False
+            if not (64 <= int(config.train_dim) <= 2048):
+                return False
+            if not (1 <= int(config.rank_dim) <= 128):
+                return False
+            if not (0 <= int(config.pulidflux_images) <= 100):
+                return False
+
+            # Validate string parameters
+            if not config.name or not config.name.replace('_', '').replace('-', '').isalnum():
+                return False
+            if len(config.name) > 100:
+                return False
+
+            # Validate file paths
+            if not Path(config.input_image).exists():
+                return False
+
+            return True
+        except (ValueError, TypeError):
+            return False
+
+    def _sanitize_string(self, value: str) -> str:
+        """Sanitize string input to prevent injection."""
+        # Only allow alphanumeric, underscore, and hyphen
+        return ''.join(c for c in value if c.isalnum() or c in '_-')
+
+    def _is_safe_path(self, path: Path) -> bool:
+        """Check if path is safe (no traversal attacks)."""
+        try:
+            # Resolve the path and check if it's within allowed directories
+            resolved_path = path.resolve()
+            allowed_roots = [
+                self.charforge_root.resolve(),
+                self.scratch_dir.resolve(),
+                Path.cwd().resolve()
+            ]
+
+            return any(
+                str(resolved_path).startswith(str(root))
+                for root in allowed_roots
+            )
+        except (OSError, ValueError):
+            return False
+
+    def _validate_inference_config(self, config) -> bool:
+        """Validate inference configuration parameters."""
+        try:
+            # Validate numeric parameters
+            if not (0.1 <= float(config.lora_weight) <= 2.0):
+                return False
+            if not (256 <= int(config.test_dim) <= 2048):
+                return False
+            if not (1 <= int(config.batch_size) <= 16):
+                return False
+            if not (10 <= int(config.num_inference_steps) <= 200):
+                return False
+
+            # Validate string parameters
+            if not config.character_name or len(config.character_name) > 100:
+                return False
+            if not config.prompt or len(config.prompt) > 2000:
+                return False
+
+            return True
+        except (ValueError, TypeError):
+            return False
+
+    def _sanitize_prompt(self, prompt: str) -> str:
+        """Sanitize prompt input while preserving readability."""
+        # Remove potentially dangerous characters but keep normal punctuation
+        dangerous_chars = ['`', '$', '\\', ';', '|', '&', '>', '<']
+        sanitized = prompt
+        for char in dangerous_chars:
+            sanitized = sanitized.replace(char, '')
+        return sanitized.strip()[:2000]  # Limit length
+
+    def _sanitize_filename(self, filename: str) -> str:
+        """Sanitize filename to prevent path traversal."""
+        # Remove path separators and dangerous characters
+        safe_chars = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-')
+        return ''.join(c for c in filename if c in safe_chars)[:100]
+
+    def _is_safe_filename(self, filename: str) -> bool:
+        """Check if filename is safe."""
+        if not filename or '..' in filename or '/' in filename or '\\' in filename:
+            return False
+        return len(filename) <= 100 and filename.replace('.', '').replace('_', '').replace('-', '').isalnum()
     
     async def run_training(
-        self, 
-        config: CharacterConfig, 
+        self,
+        config: CharacterConfig,
         env_vars: Dict[str, str],
         progress_callback: Optional[Callable[[float, str], None]] = None
     ) -> Dict[str, any]:
         """Run character training workflow."""
-        
+
+        # Validate inputs to prevent command injection
+        if not self._validate_config(config):
+            return {
+                "success": False,
+                "error": "Invalid configuration parameters",
+                "output": ""
+            }
+
         # Set up environment
         env = self.setup_environment(env_vars)
-        
-        # Prepare command
+
+        # Prepare command with validated parameters
         cmd = [
             sys.executable,
             str(self.charforge_root / "train_character.py"),
-            "--name", config.name,
-            "--input", config.input_image,
-            "--steps", str(config.steps),
-            "--batch_size", str(config.batch_size),
-            "--lr", str(config.learning_rate),
-            "--train_dim", str(config.train_dim),
-            "--rank_dim", str(config.rank_dim),
-            "--pulidflux_images", str(config.pulidflux_images)
+            "--name", self._sanitize_string(config.name),
+            "--input", str(Path(config.input_image).resolve()),
+            "--steps", str(int(config.steps)),
+            "--batch_size", str(int(config.batch_size)),
+            "--lr", str(float(config.learning_rate)),
+            "--train_dim", str(int(config.train_dim)),
+            "--rank_dim", str(int(config.rank_dim)),
+            "--pulidflux_images", str(int(config.pulidflux_images))
         ]
-        
+
         if config.work_dir:
-            cmd.extend(["--work_dir", config.work_dir])
+            # Validate and sanitize work directory path
+            work_dir = Path(config.work_dir).resolve()
+            if not self._is_safe_path(work_dir):
+                return {
+                    "success": False,
+                    "error": "Invalid work directory path",
+                    "output": ""
+                }
+            cmd.extend(["--work_dir", str(work_dir)])
         
         # Run the process
         try:
@@ -137,38 +251,55 @@ class CharForgeIntegration:
         env_vars: Dict[str, str]
     ) -> Dict[str, any]:
         """Run character inference."""
-        
+
+        # Validate inference config
+        if not self._validate_inference_config(config):
+            return {
+                "success": False,
+                "error": "Invalid inference configuration parameters",
+                "output": "",
+                "output_files": []
+            }
+
         # Set up environment
         env = self.setup_environment(env_vars)
-        
-        # Prepare command
+
+        # Prepare command with validated parameters
         cmd = [
             sys.executable,
             str(self.charforge_root / "test_character.py"),
-            "--character_name", config.character_name,
-            "--prompt", config.prompt,
-            "--lora_weight", str(config.lora_weight),
-            "--test_dim", str(config.test_dim),
-            "--batch_size", str(config.batch_size),
-            "--num_inference_steps", str(config.num_inference_steps)
+            "--character_name", self._sanitize_string(config.character_name),
+            "--prompt", self._sanitize_prompt(config.prompt),
+            "--lora_weight", str(float(config.lora_weight)),
+            "--test_dim", str(int(config.test_dim)),
+            "--batch_size", str(int(config.batch_size)),
+            "--num_inference_steps", str(int(config.num_inference_steps))
         ]
         
-        # Add optional flags
+        # Add optional flags with validation
         if config.work_dir:
-            cmd.extend(["--work_dir", config.work_dir])
-        
+            work_dir = Path(config.work_dir).resolve()
+            if self._is_safe_path(work_dir):
+                cmd.extend(["--work_dir", str(work_dir)])
+
         if config.output_filenames:
-            cmd.extend(["--output_filenames"] + config.output_filenames)
-        
+            # Validate output filenames
+            safe_filenames = [
+                self._sanitize_filename(f) for f in config.output_filenames
+                if self._is_safe_filename(f)
+            ]
+            if safe_filenames:
+                cmd.extend(["--output_filenames"] + safe_filenames)
+
         if not config.do_optimize_prompt:
             cmd.append("--no_optimize_prompt")
-        
+
         if config.fix_outfit:
             cmd.append("--fix_outfit")
-        
+
         if not config.safety_check:
             cmd.append("--no_safety_check")
-        
+
         if config.face_enhance:
             cmd.append("--face_enhance")
         

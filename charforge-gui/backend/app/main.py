@@ -7,6 +7,7 @@ from pathlib import Path
 
 from app.core.config import settings
 from app.core.database import engine, Base
+from app.core.security import rate_limit_middleware, security_headers_middleware
 from app.api import auth, training, inference, media, settings as settings_api
 
 # Create database tables
@@ -19,14 +20,23 @@ app = FastAPI(
 )
 
 # CORS configuration - Enhanced for remote access
+# Only allow all origins in development mode
+cors_origins = settings.ALLOWED_ORIGINS
+if os.getenv("ENVIRONMENT", "development") == "development":
+    cors_origins = ["*"]  # Allow all origins only in development
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS + ["*"],  # Allow all origins in development
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# Add security middleware
+app.middleware("http")(rate_limit_middleware)
+app.middleware("http")(security_headers_middleware)
 
 # Create necessary directories
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -50,7 +60,13 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    """Health check endpoint for monitoring."""
+    from datetime import datetime
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
 
 if __name__ == "__main__":
     import uvicorn

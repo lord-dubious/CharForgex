@@ -79,12 +79,14 @@
 
 <script setup lang="ts">
 import { reactive } from 'vue'
+import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Card from '@/components/ui/Card.vue'
 
 const authStore = useAuthStore()
+const toast = useToast()
 
 const form = reactive({
   username: '',
@@ -93,10 +95,31 @@ const form = reactive({
 })
 
 const handleRegister = async () => {
+  // Client-side validation
+  if (!form.username || form.username.length < 3 || form.username.length > 50) {
+    toast.error('Username must be between 3 and 50 characters')
+    return
+  }
+
+  if (!form.email || !isValidEmail(form.email)) {
+    toast.error('Please enter a valid email address')
+    return
+  }
+
+  if (!form.password || form.password.length < 8) {
+    toast.error('Password must be at least 8 characters')
+    return
+  }
+
   try {
     await authStore.register(form)
   } catch (error) {
     // Error is handled in the store
   }
+}
+
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
 }
 </script>

@@ -24,6 +24,13 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S appuser && adduser -S appuser -G appuser
+RUN chown -R appuser:appuser /usr/share/nginx/html
+
+# Switch to non-root user
+USER appuser
+
 # Expose port
 EXPOSE 5173
 

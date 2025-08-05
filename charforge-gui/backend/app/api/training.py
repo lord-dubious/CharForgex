@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import json
 from datetime import datetime
+from pathlib import Path
 
 from app.core.database import get_db, Character, TrainingSession, User
 from app.core.auth import get_current_active_user
@@ -59,32 +60,54 @@ async def create_character(
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new character."""
-    
+
+    # Validate input
+    if not request.name or len(request.name.strip()) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Character name is required"
+        )
+
+    # Sanitize character name
+    sanitized_name = ''.join(c for c in request.name if c.isalnum() or c in '_-').strip()
+    if not sanitized_name or len(sanitized_name) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid character name. Use only letters, numbers, underscores, and hyphens (max 100 chars)"
+        )
+
+    # Validate image path
+    if not request.input_image_path or not Path(request.input_image_path).exists():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Valid input image path is required"
+        )
+
     # Check if character name already exists for this user
     existing = db.query(Character).filter(
-        Character.name == request.name,
+        Character.name == sanitized_name,
         Character.user_id == current_user.id
     ).first()
-    
+
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Character with this name already exists"
         )
-    
+
     # Create character record
     character = Character(
-        name=request.name,
+        name=sanitized_name,
         user_id=current_user.id,
         input_image_path=request.input_image_path,
-        work_dir=str(charforge.scratch_dir / request.name),
+        work_dir=str(charforge.scratch_dir / sanitized_name),
         status="created"
     )
-    
+
     db.add(character)
     db.commit()
     db.refresh(character)
-    
+
     return character
 
 @router.get("/characters", response_model=List[CharacterResponse])
@@ -280,16 +303,23 @@ async def get_training_session(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific training session."""
-    
+
+    # Validate session_id
+    if session_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid session ID"
+        )
+
     session = db.query(TrainingSession).filter(
         TrainingSession.id == session_id,
         TrainingSession.user_id == current_user.id
     ).first()
-    
+
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Training session not found"
         )
-    
+
     return session

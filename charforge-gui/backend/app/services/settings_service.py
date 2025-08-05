@@ -9,14 +9,23 @@ from app.core.database import AppSettings
 # Simple encryption for sensitive settings
 def get_encryption_key():
     """Get or create encryption key for sensitive settings."""
+    # Use environment variable for production
+    env_key = os.getenv("ENCRYPTION_KEY")
+    if env_key:
+        return base64.urlsafe_b64decode(env_key.encode())
+
+    # Fallback to file-based key for development
     key_file = "encryption.key"
     if os.path.exists(key_file):
         with open(key_file, "rb") as f:
             return f.read()
     else:
         key = Fernet.generate_key()
+        # Set secure permissions on the key file
         with open(key_file, "wb") as f:
             f.write(key)
+        os.chmod(key_file, 0o600)  # Read/write for owner only
+        print("WARNING: Generated new encryption key. Set ENCRYPTION_KEY environment variable for production.")
         return key
 
 ENCRYPTION_KEY = get_encryption_key()

@@ -56,6 +56,13 @@ def get_user_by_email(db: Session, email: str) -> Optional[User]:
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
     """Authenticate a user."""
+    # Validate input to prevent injection
+    if not username or not password or len(username) > 100 or len(password) > 200:
+        return None
+
+    # Sanitize username
+    username = username.strip()
+
     user = get_user_by_username(db, username)
     if not user:
         return None
@@ -65,6 +72,38 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
 
 def create_user(db: Session, username: str, email: str, password: str) -> User:
     """Create a new user."""
+    # Validate input
+    if not username or not email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username, email, and password are required"
+        )
+
+    if len(username) < 3 or len(username) > 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username must be between 3 and 50 characters"
+        )
+
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters"
+        )
+
+    # Validate email format
+    import re
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid email format"
+        )
+
+    # Sanitize inputs
+    username = username.strip()
+    email = email.strip().lower()
+
     # Check if user already exists
     if get_user_by_username(db, username):
         raise HTTPException(
@@ -76,7 +115,7 @@ def create_user(db: Session, username: str, email: str, password: str) -> User:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
-    
+
     hashed_password = get_password_hash(password)
     user = User(
         username=username,
