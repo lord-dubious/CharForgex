@@ -30,6 +30,44 @@ class CharacterConfig:
     log_file: str = None
     pulidflux_images: int = 0
 
+    # Model configuration
+    base_model: str = "RunDiffusion/Juggernaut-XL-v9"
+    vae_model: str = "madebyollin/sdxl-vae-fp16-fix"
+    unet_model: str = None
+    scheduler: str = "ddpm"
+    dtype: str = "float16"
+
+    # MV Adapter configuration
+    use_mv_adapter: bool = False
+    adapter_path: str = "huanngzh/mv-adapter"
+    num_views: int = 6
+    mv_height: int = 768
+    mv_width: int = 768
+    guidance_scale: float = 3.0
+    reference_conditioning_scale: float = 1.0
+    azimuth_degrees: list = None
+    remove_background: bool = True
+
+    # Advanced training configuration
+    optimizer: str = "adamw"
+    weight_decay: float = 0.01
+    lr_scheduler: str = "constant"
+    gradient_accumulation: int = 1
+    mixed_precision: str = "fp16"
+    save_every: int = 250
+    max_saves: int = 5
+    gradient_checkpointing: bool = False
+    train_text_encoder: bool = False
+
+    # ComfyUI model paths
+    comfyui_checkpoint: str = None
+    comfyui_vae: str = None
+    comfyui_lora: str = None
+
+    def __post_init__(self):
+        if self.azimuth_degrees is None:
+            self.azimuth_degrees = [0, 45, 90, 180, 270, 315]
+
 
 def build_charsheet(config: CharacterConfig):
     """
@@ -288,11 +326,49 @@ if __name__ == "__main__":
     parser.add_argument("--train_dim", type=int, default=512, help="Training image dimension")
     parser.add_argument("--rank_dim", type=int, default=8, help="Rank dimension for the LoRA model")
     parser.add_argument("--pulidflux_images", type=int, default=0, help="Number of Pulid-Flux images to include")
+
+    # Model configuration
+    parser.add_argument("--base_model", type=str, default="RunDiffusion/Juggernaut-XL-v9", help="Base model to use")
+    parser.add_argument("--vae_model", type=str, default="madebyollin/sdxl-vae-fp16-fix", help="VAE model to use")
+    parser.add_argument("--unet_model", type=str, help="UNet model to use (optional)")
+    parser.add_argument("--scheduler", type=str, default="ddpm", help="Noise scheduler")
+    parser.add_argument("--dtype", type=str, default="float16", help="Data type for training")
+
+    # MV Adapter configuration
+    parser.add_argument("--use_mv_adapter", action="store_true", help="Enable MV Adapter")
+    parser.add_argument("--adapter_path", type=str, default="huanngzh/mv-adapter", help="MV Adapter path")
+    parser.add_argument("--num_views", type=int, default=6, help="Number of views for MV Adapter")
+    parser.add_argument("--mv_height", type=int, default=768, help="MV Adapter image height")
+    parser.add_argument("--mv_width", type=int, default=768, help="MV Adapter image width")
+    parser.add_argument("--guidance_scale", type=float, default=3.0, help="Guidance scale for MV Adapter")
+    parser.add_argument("--reference_conditioning_scale", type=float, default=1.0, help="Reference conditioning scale")
+    parser.add_argument("--azimuth_degrees", type=str, default="0,45,90,180,270,315", help="Azimuth degrees (comma-separated)")
+    parser.add_argument("--remove_background", action="store_true", help="Remove background for MV Adapter")
+
+    # Advanced training configuration
+    parser.add_argument("--optimizer", type=str, default="adamw", help="Optimizer to use")
+    parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay")
+    parser.add_argument("--lr_scheduler", type=str, default="constant", help="Learning rate scheduler")
+    parser.add_argument("--gradient_accumulation", type=int, default=1, help="Gradient accumulation steps")
+    parser.add_argument("--mixed_precision", type=str, default="fp16", help="Mixed precision training")
+    parser.add_argument("--save_every", type=int, default=250, help="Save checkpoint every N steps")
+    parser.add_argument("--max_saves", type=int, default=5, help="Maximum number of checkpoints to keep")
+    parser.add_argument("--gradient_checkpointing", action="store_true", help="Enable gradient checkpointing")
+    parser.add_argument("--train_text_encoder", action="store_true", help="Train text encoder")
+
+    # ComfyUI model paths
+    parser.add_argument("--comfyui_checkpoint", type=str, help="ComfyUI checkpoint path")
+    parser.add_argument("--comfyui_vae", type=str, help="ComfyUI VAE path")
+    parser.add_argument("--comfyui_lora", type=str, help="ComfyUI LoRA path")
+
     args = parser.parse_args()
 
     if not os.path.exists(args.input):
         print(f"Error: Input image '{args.input}' does not exist.")
         sys.exit(1)
+
+    # Parse azimuth degrees
+    azimuth_degrees = [int(x.strip()) for x in args.azimuth_degrees.split(',')]
 
     config = CharacterConfig(
         name=args.name,
@@ -303,7 +379,41 @@ if __name__ == "__main__":
         learning_rate=args.lr,
         train_dim=args.train_dim,
         rank_dim=args.rank_dim,
-        pulidflux_images=args.pulidflux_images
+        pulidflux_images=args.pulidflux_images,
+
+        # Model configuration
+        base_model=args.base_model,
+        vae_model=args.vae_model,
+        unet_model=args.unet_model,
+        scheduler=args.scheduler,
+        dtype=args.dtype,
+
+        # MV Adapter configuration
+        use_mv_adapter=args.use_mv_adapter,
+        adapter_path=args.adapter_path,
+        num_views=args.num_views,
+        mv_height=args.mv_height,
+        mv_width=args.mv_width,
+        guidance_scale=args.guidance_scale,
+        reference_conditioning_scale=args.reference_conditioning_scale,
+        azimuth_degrees=azimuth_degrees,
+        remove_background=args.remove_background,
+
+        # Advanced training configuration
+        optimizer=args.optimizer,
+        weight_decay=args.weight_decay,
+        lr_scheduler=args.lr_scheduler,
+        gradient_accumulation=args.gradient_accumulation,
+        mixed_precision=args.mixed_precision,
+        save_every=args.save_every,
+        max_saves=args.max_saves,
+        gradient_checkpointing=args.gradient_checkpointing,
+        train_text_encoder=args.train_text_encoder,
+
+        # ComfyUI model paths
+        comfyui_checkpoint=args.comfyui_checkpoint,
+        comfyui_vae=args.comfyui_vae,
+        comfyui_lora=args.comfyui_lora
     )
 
     output_dir = build_character(config)

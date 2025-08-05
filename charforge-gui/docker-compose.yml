@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production}
+      - DATABASE_URL=sqlite:///./database.db
+      - HOST=0.0.0.0
+      - PORT=8000
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HF_HOME=${HF_HOME:-}
+      - CIVITAI_API_KEY=${CIVITAI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - FAL_KEY=${FAL_KEY:-}
+    volumes:
+      - ./backend/database.db:/app/database.db
+      - ./backend/uploads:/app/uploads
+      - ./backend/media:/app/media
+      - ./backend/results:/app/results
+      - ${CHARFORGE_ROOT:-../}:/charforge
+    networks:
+      - charforge-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - charforge-network
+    restart: unless-stopped
+
+  # Nginx reverse proxy (optional, for production)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - charforge-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+networks:
+  charforge-network:
+    driver: bridge
+
+volumes:
+  database:
+  uploads:
+  media:
+  results:
