@@ -8,7 +8,7 @@ from pathlib import Path
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.security import rate_limit_middleware, security_headers_middleware
-from app.api import auth, training, inference, media, settings as settings_api
+from app.api import auth, training, inference, media, datasets, settings as settings_api
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -52,6 +52,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(training.router, prefix="/api/training", tags=["training"])
 app.include_router(inference.router, prefix="/api/inference", tags=["inference"])
 app.include_router(media.router, prefix="/api/media", tags=["media"])
+app.include_router(datasets.router, prefix="/api/datasets", tags=["datasets"])
 app.include_router(settings_api.router, prefix="/api/settings", tags=["settings"])
 
 @app.get("/")

@@ -189,4 +189,65 @@ export const settingsApi = {
     api.get('/settings/test-environment').then(res => res.data),
 }
 
+// Dataset API
+export interface Dataset {
+  id: number
+  name: string
+  trigger_word: string
+  caption_template: string
+  auto_caption: boolean
+  resize_images: boolean
+  crop_images: boolean
+  flip_images: boolean
+  quality_filter: string
+  image_count: number
+  status: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DatasetImage {
+  id: number
+  filename: string
+  original_filename: string
+  caption: string | null
+  processed: boolean
+  created_at: string
+}
+
+export interface CreateDatasetRequest {
+  name: string
+  trigger_word: string
+  caption_template: string
+  auto_caption: boolean
+  resize_images: boolean
+  crop_images: boolean
+  flip_images: boolean
+  quality_filter: string
+  selected_images: string[]
+}
+
+export const datasetApi = {
+  createDataset: (data: CreateDatasetRequest): Promise<Dataset> =>
+    api.post('/datasets/datasets', data).then(res => res.data),
+
+  getDatasets: (): Promise<{ datasets: Dataset[]; total: number }> =>
+    api.get('/datasets/datasets').then(res => res.data),
+
+  getDataset: (id: number): Promise<Dataset> =>
+    api.get(`/datasets/datasets/${id}`).then(res => res.data),
+
+  getDatasetImages: (id: number): Promise<DatasetImage[]> =>
+    api.get(`/datasets/datasets/${id}/images`).then(res => res.data),
+
+  updateTriggerWord: (id: number, trigger_word: string): Promise<{ message: string }> =>
+    api.put(`/datasets/datasets/${id}/trigger-word`, { trigger_word }).then(res => res.data),
+
+  updateImageCaption: (datasetId: number, imageId: number, caption: string): Promise<{ message: string }> =>
+    api.put(`/datasets/datasets/${datasetId}/images/${imageId}/caption`, { caption }).then(res => res.data),
+
+  deleteDataset: (id: number): Promise<{ message: string }> =>
+    api.delete(`/datasets/datasets/${id}`).then(res => res.data),
+}
+
 export default api

@@ -8,7 +8,7 @@
             Manage your AI characters and their training status
           </p>
         </div>
-        <Button @click="$router.push('/characters/create')">
+        <Button @click="$router.push('/characters/create')" data-tour="create-character">
           <Plus class="mr-2 h-4 w-4" />
           Create Character
         </Button>

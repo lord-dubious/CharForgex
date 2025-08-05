@@ -12,6 +12,7 @@
           v-for="item in navigation"
           :key="item.name"
           :to="item.href"
+          :data-tour="item.tourId"
           class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors"
           :class="[
             $route.path === item.href
@@ -82,6 +83,7 @@ import { useAuthStore } from '@/stores/auth'
 import {
   LayoutDashboard,
   Users,
+  Database,
   Zap,
   Wand2,
   Image,
@@ -96,13 +98,14 @@ const authStore = useAuthStore()
 const showUserMenu = ref(false)
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Characters', href: '/characters', icon: Users },
-  { name: 'Training', href: '/training', icon: Zap },
-  { name: 'Inference', href: '/inference', icon: Wand2 },
-  { name: 'Gallery', href: '/gallery', icon: Image },
-  { name: 'Media', href: '/media', icon: Upload },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, tourId: 'dashboard-link' },
+  { name: 'Characters', href: '/characters', icon: Users, tourId: 'characters-link' },
+  { name: 'Datasets', href: '/datasets', icon: Database, tourId: 'datasets-link' },
+  { name: 'Training', href: '/training', icon: Zap, tourId: 'training-link' },
+  { name: 'Inference', href: '/inference', icon: Wand2, tourId: 'inference-link' },
+  { name: 'Gallery', href: '/gallery', icon: Image, tourId: 'gallery-link' },
+  { name: 'Media', href: '/media', icon: Upload, tourId: 'media-link' },
+  { name: 'Settings', href: '/settings', icon: Settings, tourId: 'settings-link' },
 ]
 
 const pageTitle = computed(() => {

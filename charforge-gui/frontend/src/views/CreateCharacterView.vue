@@ -27,6 +27,41 @@
                 Use only letters, numbers, underscores, and hyphens. This will be used for file naming.
               </p>
             </div>
+
+            <!-- Dataset Selection -->
+            <div>
+              <label class="block text-sm font-medium mb-2">Training Dataset (Optional)</label>
+              <select
+                v-model="form.datasetId"
+                class="w-full px-3 py-2 border border-input rounded-md"
+                @change="onDatasetChange"
+              >
+                <option value="">Select a dataset or use single image</option>
+                <option
+                  v-for="dataset in datasets"
+                  :key="dataset.id"
+                  :value="dataset.id"
+                >
+                  {{ dataset.name }} ({{ dataset.image_count }} images)
+                </option>
+              </select>
+              <p class="text-xs text-muted-foreground mt-1">
+                Choose a prepared dataset for better training results, or <router-link to="/datasets" class="text-primary hover:underline">create a new one</router-link>
+              </p>
+            </div>
+
+            <!-- Trigger Word -->
+            <div>
+              <label class="block text-sm font-medium mb-2">Trigger Word</label>
+              <Input
+                v-model="form.triggerWord"
+                placeholder="e.g., ohwx person, mychar"
+                class="w-full"
+              />
+              <p class="text-xs text-muted-foreground mt-1">
+                The word that will activate your character in prompts
+              </p>
+            </div>
           </div>
         </Card>
 
@@ -247,20 +282,23 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { Upload, Image, X, Zap } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
-import { charactersApi, mediaApi, type MediaFile } from '@/services/api'
+import { charactersApi, mediaApi, datasetApi, type MediaFile, type Dataset } from '@/services/api'
 
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
 
 const form = ref({
   name: '',
+  datasetId: '',
+  triggerWord: '',
   steps: 800,
   batch_size: 1,
   learning_rate: 0.0008,
@@ -272,11 +310,13 @@ const form = ref({
 const selectedImage = ref<MediaFile | File | null>(null)
 const showMediaLibrary = ref(false)
 const mediaFiles = ref<MediaFile[]>([])
+const datasets = ref<Dataset[]>([])
 const isCreating = ref(false)
 const fileInput = ref<HTMLInputElement>()
 
 const canCreate = computed(() => {
-  return form.value.name.trim() && selectedImage.value
+  return form.value.name.trim() && form.value.triggerWord.trim() &&
+         (selectedImage.value || form.value.datasetId)
 })
 
 const loadMediaFiles = async () => {
@@ -285,6 +325,28 @@ const loadMediaFiles = async () => {
     mediaFiles.value = response.files
   } catch (error) {
     console.error('Failed to load media files:', error)
+  }
+}
+
+const loadDatasets = async () => {
+  try {
+    const response = await datasetApi.getDatasets()
+    datasets.value = response.datasets.filter(d => d.status === 'ready')
+  } catch (error) {
+    toast.error('Failed to load datasets')
+  }
+}
+
+const onDatasetChange = async () => {
+  if (form.value.datasetId) {
+    try {
+      const dataset = await datasetApi.getDataset(parseInt(form.value.datasetId))
+      form.value.triggerWord = dataset.trigger_word
+      // Clear selected image since we're using a dataset
+      selectedImage.value = null
+    } catch (error) {
+      toast.error('Failed to load dataset details')
+    }
   }
 }
 
@@ -355,7 +417,15 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadMediaFiles()
+  await loadDatasets()
+
+  // Check if dataset is pre-selected via query parameter
+  const datasetId = route.query.dataset as string
+  if (datasetId && datasets.value.find(d => d.id === parseInt(datasetId))) {
+    form.value.datasetId = datasetId
+    await onDatasetChange()
+  }
 })
 </script>

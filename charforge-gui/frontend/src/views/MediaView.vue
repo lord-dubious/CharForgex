@@ -8,10 +8,16 @@
             Upload and manage images for character training
           </p>
         </div>
-        <Button @click="triggerFileUpload">
-          <Upload class="mr-2 h-4 w-4" />
-          Upload Images
-        </Button>
+        <div class="flex space-x-2">
+          <Button @click="triggerFileUpload" variant="outline">
+            <Upload class="mr-2 h-4 w-4" />
+            Upload Images
+          </Button>
+          <Button @click="showDatasetModal = true">
+            <FolderPlus class="mr-2 h-4 w-4" />
+            Create Dataset
+          </Button>
+        </div>
       </div>
 
       <!-- Upload Area -->
@@ -191,6 +197,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Dataset Creation Modal -->
+    <DatasetModal
+      v-if="showDatasetModal"
+      :files="files"
+      @close="showDatasetModal = false"
+      @created="handleDatasetCreated"
+    />
   </AppLayout>
 </template>
 
@@ -198,11 +212,12 @@
 import { ref, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import {
-  Upload, Image, Grid3X3, List, Trash2, X, Download
+  Upload, Image, Grid3X3, List, Trash2, X, Download, FolderPlus
 } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
+import DatasetModal from '@/components/media/DatasetModal.vue'
 import { mediaApi, type MediaFile } from '@/services/api'
 
 const toast = useToast()
@@ -213,6 +228,7 @@ const isLoading = ref(false)
 const isDragging = ref(false)
 const viewMode = ref<'grid' | 'list'>('grid')
 const fileInput = ref<HTMLInputElement>()
+const showDatasetModal = ref(false)
 
 interface UploadItem {
   id: string
@@ -318,6 +334,12 @@ const formatFileSize = (bytes: number): string => {
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+const handleDatasetCreated = (datasetName: string) => {
+  showDatasetModal.value = false
+  toast.success(`Dataset "${datasetName}" created successfully!`)
+  loadMediaFiles() // Refresh the file list
 }
 
 onMounted(() => {

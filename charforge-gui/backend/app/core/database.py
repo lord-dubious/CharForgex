@@ -85,6 +85,35 @@ class AppSettings(Base):
     is_encrypted = Column(Boolean, default=False)
     updated_at = Column(DateTime, default=datetime.utcnow)
 
+class Dataset(Base):
+    __tablename__ = "datasets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    name = Column(String, nullable=False)
+    trigger_word = Column(String, nullable=False)
+    caption_template = Column(Text, nullable=True)
+    auto_caption = Column(Boolean, default=True)
+    resize_images = Column(Boolean, default=True)
+    crop_images = Column(Boolean, default=True)
+    flip_images = Column(Boolean, default=False)
+    quality_filter = Column(String, default="basic")
+    image_count = Column(Integer, default=0)
+    status = Column(String, default="created")  # created, processing, ready, failed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class DatasetImage(Base):
+    __tablename__ = "dataset_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    dataset_id = Column(Integer, nullable=False)
+    filename = Column(String, nullable=False)
+    original_filename = Column(String, nullable=False)
+    caption = Column(Text, nullable=True)
+    processed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 # Dependency to get database session
 def get_db() -> Session:
     db = SessionLocal()
