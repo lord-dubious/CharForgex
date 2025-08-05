@@ -11,6 +11,46 @@ import shutil
 from app.core.config import settings
 
 @dataclass
+class ModelConfig:
+    """Model configuration for training."""
+    base_model: str = "RunDiffusion/Juggernaut-XL-v9"
+    vae_model: str = "madebyollin/sdxl-vae-fp16-fix"
+    unet_model: str = None
+    adapter_path: str = "huanngzh/mv-adapter"
+    scheduler: str = "ddpm"
+    dtype: str = "float16"
+
+@dataclass
+class MVAdapterConfig:
+    """MV Adapter configuration."""
+    enabled: bool = False
+    num_views: int = 6
+    height: int = 768
+    width: int = 768
+    guidance_scale: float = 3.0
+    reference_conditioning_scale: float = 1.0
+    azimuth_degrees: List[int] = None
+    remove_background: bool = True
+
+    def __post_init__(self):
+        if self.azimuth_degrees is None:
+            self.azimuth_degrees = [0, 45, 90, 180, 270, 315]
+
+@dataclass
+class AdvancedTrainingConfig:
+    """Advanced training configuration."""
+    optimizer: str = "adamw"
+    weight_decay: float = 1e-2
+    lr_scheduler: str = "constant"
+    gradient_checkpointing: bool = True
+    train_text_encoder: bool = False
+    noise_scheduler: str = "ddpm"
+    gradient_accumulation: int = 1
+    mixed_precision: str = "fp16"
+    save_every: int = 250
+    max_saves: int = 5
+
+@dataclass
 class CharacterConfig:
     """Configuration for character generation and training."""
     name: str
@@ -22,6 +62,24 @@ class CharacterConfig:
     train_dim: int = 512
     rank_dim: int = 8
     pulidflux_images: int = 0
+
+    # Model configurations
+    model_config: ModelConfig = None
+    mv_adapter_config: MVAdapterConfig = None
+    advanced_config: AdvancedTrainingConfig = None
+
+    # ComfyUI model paths
+    comfyui_checkpoint: str = None
+    comfyui_vae: str = None
+    comfyui_lora: str = None
+
+    def __post_init__(self):
+        if self.model_config is None:
+            self.model_config = ModelConfig()
+        if self.mv_adapter_config is None:
+            self.mv_adapter_config = MVAdapterConfig()
+        if self.advanced_config is None:
+            self.advanced_config = AdvancedTrainingConfig()
 
 @dataclass
 class InferenceConfig:
@@ -192,6 +250,51 @@ class CharForgeIntegration:
             "--rank_dim", str(int(config.rank_dim)),
             "--pulidflux_images", str(int(config.pulidflux_images))
         ]
+
+        # Add model configuration
+        if config.model_config:
+            cmd.extend(["--base_model", config.model_config.base_model])
+            cmd.extend(["--vae_model", config.model_config.vae_model])
+            if config.model_config.unet_model:
+                cmd.extend(["--unet_model", config.model_config.unet_model])
+            cmd.extend(["--scheduler", config.model_config.scheduler])
+            cmd.extend(["--dtype", config.model_config.dtype])
+
+        # Add MV Adapter configuration
+        if config.mv_adapter_config and config.mv_adapter_config.enabled:
+            cmd.extend(["--use_mv_adapter"])
+            cmd.extend(["--adapter_path", config.mv_adapter_config.adapter_path])
+            cmd.extend(["--num_views", str(config.mv_adapter_config.num_views)])
+            cmd.extend(["--mv_height", str(config.mv_adapter_config.height)])
+            cmd.extend(["--mv_width", str(config.mv_adapter_config.width)])
+            cmd.extend(["--guidance_scale", str(config.mv_adapter_config.guidance_scale)])
+            cmd.extend(["--reference_conditioning_scale", str(config.mv_adapter_config.reference_conditioning_scale)])
+            cmd.extend(["--azimuth_degrees", ",".join(map(str, config.mv_adapter_config.azimuth_degrees))])
+            if config.mv_adapter_config.remove_background:
+                cmd.extend(["--remove_background"])
+
+        # Add advanced training configuration
+        if config.advanced_config:
+            cmd.extend(["--optimizer", config.advanced_config.optimizer])
+            cmd.extend(["--weight_decay", str(config.advanced_config.weight_decay)])
+            cmd.extend(["--lr_scheduler", config.advanced_config.lr_scheduler])
+            cmd.extend(["--gradient_accumulation", str(config.advanced_config.gradient_accumulation)])
+            cmd.extend(["--mixed_precision", config.advanced_config.mixed_precision])
+            cmd.extend(["--save_every", str(config.advanced_config.save_every)])
+            cmd.extend(["--max_saves", str(config.advanced_config.max_saves)])
+
+            if config.advanced_config.gradient_checkpointing:
+                cmd.extend(["--gradient_checkpointing"])
+            if config.advanced_config.train_text_encoder:
+                cmd.extend(["--train_text_encoder"])
+
+        # Add ComfyUI model paths (these will be copied to standard names)
+        if config.comfyui_checkpoint:
+            cmd.extend(["--comfyui_checkpoint", config.comfyui_checkpoint])
+        if config.comfyui_vae:
+            cmd.extend(["--comfyui_vae", config.comfyui_vae])
+        if config.comfyui_lora:
+            cmd.extend(["--comfyui_lora", config.comfyui_lora])
 
         if config.work_dir:
             # Validate and sanitize work directory path

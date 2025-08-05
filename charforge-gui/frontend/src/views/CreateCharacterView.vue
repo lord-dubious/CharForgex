@@ -135,6 +135,147 @@
           </div>
         </Card>
 
+        <!-- Model Configuration -->
+        <Card class="p-6">
+          <h3 class="text-lg font-semibold mb-4">Model Configuration</h3>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Base Model</label>
+              <select
+                v-model="form.modelConfig.baseModel"
+                class="w-full px-3 py-2 border border-input rounded-md"
+              >
+                <option
+                  v-for="model in availableModels.checkpoints"
+                  :key="model.path"
+                  :value="model.path"
+                >
+                  {{ model.name }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">VAE Model</label>
+              <select
+                v-model="form.modelConfig.vaeModel"
+                class="w-full px-3 py-2 border border-input rounded-md"
+              >
+                <option
+                  v-for="vae in availableModels.vaes"
+                  :key="vae.path"
+                  :value="vae.path"
+                >
+                  {{ vae.name }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Scheduler</label>
+              <select
+                v-model="form.modelConfig.scheduler"
+                class="w-full px-3 py-2 border border-input rounded-md"
+              >
+                <option
+                  v-for="scheduler in availableSchedulers"
+                  :key="scheduler.value"
+                  :value="scheduler.value"
+                >
+                  {{ scheduler.name }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Data Type</label>
+              <select
+                v-model="form.modelConfig.dtype"
+                class="w-full px-3 py-2 border border-input rounded-md"
+              >
+                <option value="float16">Float16 (Recommended)</option>
+                <option value="float32">Float32</option>
+                <option value="bfloat16">BFloat16</option>
+              </select>
+            </div>
+          </div>
+        </Card>
+
+        <!-- MV Adapter Configuration -->
+        <Card class="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">MV Adapter (Multi-View)</h3>
+            <label class="flex items-center space-x-2">
+              <input
+                v-model="form.mvAdapterConfig.enabled"
+                type="checkbox"
+                class="rounded border-input"
+              />
+              <span class="text-sm">Enable MV Adapter</span>
+            </label>
+          </div>
+
+          <div v-if="form.mvAdapterConfig.enabled" class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Number of Views</label>
+              <Input
+                v-model.number="form.mvAdapterConfig.numViews"
+                type="number"
+                min="4"
+                max="12"
+                class="w-full"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Guidance Scale</label>
+              <Input
+                v-model.number="form.mvAdapterConfig.guidanceScale"
+                type="number"
+                step="0.1"
+                min="1.0"
+                max="10.0"
+                class="w-full"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Image Height</label>
+              <Input
+                v-model.number="form.mvAdapterConfig.height"
+                type="number"
+                min="512"
+                max="1024"
+                step="64"
+                class="w-full"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Image Width</label>
+              <Input
+                v-model.number="form.mvAdapterConfig.width"
+                type="number"
+                min="512"
+                max="1024"
+                step="64"
+                class="w-full"
+              />
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="flex items-center space-x-2">
+                <input
+                  v-model="form.mvAdapterConfig.removeBackground"
+                  type="checkbox"
+                  class="rounded border-input"
+                />
+                <span class="text-sm">Remove Background</span>
+              </label>
+            </div>
+          </div>
+        </Card>
+
         <!-- Training Configuration -->
         <Card class="p-6">
           <h3 class="text-lg font-semibold mb-4">Training Configuration</h3>
@@ -222,6 +363,19 @@
           </div>
         </Card>
 
+        <!-- Advanced Training Configuration -->
+        <AdvancedTrainingConfig
+          :config="form.advancedConfig"
+          :available-optimizers="availableOptimizers"
+          :available-trainers="availableTrainers"
+          :available-models="availableModels"
+          @update:config="form.advancedConfig = $event"
+          @update:selected-trainer="selectedTrainer = $event"
+        />
+
+        <!-- Configuration Summary -->
+        <ModelConfigSummary :config="form" />
+
         <!-- Actions -->
         <div class="flex justify-end space-x-3">
           <Button type="button" variant="outline" @click="$router.push('/characters')">
@@ -289,7 +443,9 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
-import { charactersApi, mediaApi, datasetApi, type MediaFile, type Dataset } from '@/services/api'
+import AdvancedTrainingConfig from '@/components/training/AdvancedTrainingConfig.vue'
+import ModelConfigSummary from '@/components/training/ModelConfigSummary.vue'
+import { charactersApi, mediaApi, datasetApi, api, type MediaFile, type Dataset } from '@/services/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -304,7 +460,48 @@ const form = ref({
   learning_rate: 0.0008,
   train_dim: 512,
   rank_dim: 8,
-  pulidflux_images: 0
+  pulidflux_images: 0,
+
+  // Model configuration
+  modelConfig: {
+    baseModel: 'RunDiffusion/Juggernaut-XL-v9',
+    vaeModel: 'madebyollin/sdxl-vae-fp16-fix',
+    unetModel: null,
+    adapterPath: 'huanngzh/mv-adapter',
+    scheduler: 'ddpm',
+    dtype: 'float16'
+  },
+
+  // MV Adapter configuration
+  mvAdapterConfig: {
+    enabled: false,
+    numViews: 6,
+    height: 768,
+    width: 768,
+    guidanceScale: 3.0,
+    referenceConditioningScale: 1.0,
+    azimuthDegrees: [0, 45, 90, 180, 270, 315],
+    removeBackground: true
+  },
+
+  // Advanced configuration
+  advancedConfig: {
+    optimizer: 'adamw',
+    weightDecay: 0.01,
+    lrScheduler: 'constant',
+    gradientCheckpointing: true,
+    trainTextEncoder: false,
+    noiseScheduler: 'ddpm',
+    gradientAccumulation: 1,
+    mixedPrecision: 'fp16',
+    saveEvery: 250,
+    maxSaves: 5
+  },
+
+  // ComfyUI model selection
+  comfyuiCheckpoint: null,
+  comfyuiVae: null,
+  comfyuiLora: null
 })
 
 const selectedImage = ref<MediaFile | File | null>(null)
@@ -313,6 +510,19 @@ const mediaFiles = ref<MediaFile[]>([])
 const datasets = ref<Dataset[]>([])
 const isCreating = ref(false)
 const fileInput = ref<HTMLInputElement>()
+
+// Model and configuration data
+const availableModels = ref({
+  checkpoints: [],
+  vaes: [],
+  loras: [],
+  controlnets: [],
+  adapters: []
+})
+const availableSchedulers = ref([])
+const availableOptimizers = ref([])
+const availableTrainers = ref([])
+const selectedTrainer = ref('lora')
 
 const canCreate = computed(() => {
   return form.value.name.trim() && form.value.triggerWord.trim() &&
@@ -334,6 +544,30 @@ const loadDatasets = async () => {
     datasets.value = response.datasets.filter(d => d.status === 'ready')
   } catch (error) {
     toast.error('Failed to load datasets')
+  }
+}
+
+const loadModelsAndConfig = async () => {
+  try {
+    // Load available models
+    const modelsResponse = await api.get('/models')
+    availableModels.value = modelsResponse.data
+
+    // Load schedulers
+    const schedulersResponse = await api.get('/models/schedulers')
+    availableSchedulers.value = schedulersResponse.data.schedulers
+
+    // Load optimizers
+    const optimizersResponse = await api.get('/models/optimizers')
+    availableOptimizers.value = optimizersResponse.data.optimizers
+
+    // Load trainers
+    const trainersResponse = await api.get('/models/trainers')
+    availableTrainers.value = trainersResponse.data.trainers
+
+  } catch (error: any) {
+    console.error('Failed to load models and configuration:', error)
+    toast.error('Failed to load model configuration')
   }
 }
 
@@ -420,6 +654,7 @@ const formatFileSize = (bytes: number): string => {
 onMounted(async () => {
   loadMediaFiles()
   await loadDatasets()
+  await loadModelsAndConfig()
 
   // Check if dataset is pre-selected via query parameter
   const datasetId = route.query.dataset as string

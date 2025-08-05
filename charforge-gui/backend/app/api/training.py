@@ -14,14 +14,59 @@ from app.services.settings_service import get_user_env_vars
 router = APIRouter()
 
 # Pydantic models
+class ModelConfig(BaseModel):
+    base_model: str = "RunDiffusion/Juggernaut-XL-v9"
+    vae_model: str = "madebyollin/sdxl-vae-fp16-fix"
+    unet_model: Optional[str] = None
+    adapter_path: str = "huanngzh/mv-adapter"
+    scheduler: str = "ddpm"
+    dtype: str = "float16"
+
+class MVAdapterConfig(BaseModel):
+    enabled: bool = False
+    num_views: int = 6
+    height: int = 768
+    width: int = 768
+    guidance_scale: float = 3.0
+    reference_conditioning_scale: float = 1.0
+    azimuth_degrees: List[int] = [0, 45, 90, 180, 270, 315]
+    remove_background: bool = True
+
+class AdvancedTrainingConfig(BaseModel):
+    optimizer: str = "adamw"
+    weight_decay: float = 1e-2
+    lr_scheduler: str = "constant"
+    gradient_checkpointing: bool = True
+    train_text_encoder: bool = False
+    noise_scheduler: str = "ddpm"
+    gradient_accumulation: int = 1
+    mixed_precision: str = "fp16"
+    save_every: int = 250
+    max_saves: int = 5
+
 class TrainingRequest(BaseModel):
     character_id: int
+    # Basic parameters
     steps: Optional[int] = 800
     batch_size: Optional[int] = 1
     learning_rate: Optional[float] = 8e-4
     train_dim: Optional[int] = 512
     rank_dim: Optional[int] = 8
     pulidflux_images: Optional[int] = 0
+
+    # Model configuration
+    model_config: Optional[ModelConfig] = ModelConfig()
+
+    # MV Adapter configuration
+    mv_adapter_config: Optional[MVAdapterConfig] = MVAdapterConfig()
+
+    # Advanced training options
+    advanced_config: Optional[AdvancedTrainingConfig] = AdvancedTrainingConfig()
+
+    # ComfyUI model selection
+    comfyui_checkpoint: Optional[str] = None
+    comfyui_vae: Optional[str] = None
+    comfyui_lora: Optional[str] = None
 
 class TrainingResponse(BaseModel):
     id: int
@@ -234,7 +279,17 @@ async def run_training_background(
             learning_rate=request.learning_rate,
             train_dim=request.train_dim,
             rank_dim=request.rank_dim,
-            pulidflux_images=request.pulidflux_images
+            pulidflux_images=request.pulidflux_images,
+
+            # Model configuration
+            model_config=request.model_config,
+            mv_adapter_config=request.mv_adapter_config,
+            advanced_config=request.advanced_config,
+
+            # ComfyUI model paths
+            comfyui_checkpoint=request.comfyui_checkpoint,
+            comfyui_vae=request.comfyui_vae,
+            comfyui_lora=request.comfyui_lora
         )
         
         # Progress callback

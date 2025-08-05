@@ -123,12 +123,30 @@ export const charactersApi = {
 export const trainingApi = {
   startTraining: (characterId: number, config: any): Promise<TrainingSession> =>
     api.post(`/training/characters/${characterId}/train`, { character_id: characterId, ...config }).then(res => res.data),
-  
+
   getTrainingSessions: (characterId: number): Promise<TrainingSession[]> =>
     api.get(`/training/characters/${characterId}/training`).then(res => res.data),
-  
+
   getTrainingSession: (sessionId: number): Promise<TrainingSession> =>
     api.get(`/training/training/${sessionId}`).then(res => res.data),
+}
+
+// Models API
+export const modelsApi = {
+  getModels: (): Promise<any> =>
+    api.get('/models').then(res => res.data),
+
+  getSchedulers: (): Promise<any> =>
+    api.get('/models/schedulers').then(res => res.data),
+
+  getOptimizers: (): Promise<any> =>
+    api.get('/models/optimizers').then(res => res.data),
+
+  getTrainers: (): Promise<any> =>
+    api.get('/models/trainers').then(res => res.data),
+
+  validateModel: (modelPath: string): Promise<any> =>
+    api.post('/models/validate-model', { model_path: modelPath }).then(res => res.data),
 }
 
 // Inference API
