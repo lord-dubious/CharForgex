@@ -75,23 +75,23 @@ async def rate_limit_middleware(request: Request, call_next):
 
 def validate_file_upload(file_content: bytes, filename: str, max_size: int = 50 * 1024 * 1024) -> bool:
     """Validate uploaded file for security."""
-    
-    # Check file size
-    if len(file_content) > max_size:
-        return False
-    
+
+    # For partial content validation, we only check the first chunk
+    # The max_size check is done during streaming in the upload handler
+
     # Check for malicious file signatures
     malicious_signatures = [
         b'\x4D\x5A',  # PE executable
         b'\x7F\x45\x4C\x46',  # ELF executable
         b'\xCA\xFE\xBA\xBE',  # Java class file
         b'\x50\x4B\x03\x04',  # ZIP file (could contain malicious content)
+        b'\x00\x00\x01\x00',  # ICO file (could be disguised executable)
     ]
-    
+
     for signature in malicious_signatures:
         if file_content.startswith(signature):
             return False
-    
+
     # Check for valid image signatures
     valid_image_signatures = [
         b'\xFF\xD8\xFF',  # JPEG
@@ -100,11 +100,17 @@ def validate_file_upload(file_content: bytes, filename: str, max_size: int = 50 
         b'\x52\x49\x46\x46',  # WebP (RIFF)
         b'\x42\x4D',  # BMP
     ]
-    
+
     is_valid_image = any(file_content.startswith(sig) for sig in valid_image_signatures)
     if not is_valid_image:
         return False
-    
+
+    # Additional filename validation
+    allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']
+    file_ext = filename.lower().split('.')[-1] if '.' in filename else ''
+    if f'.{file_ext}' not in allowed_extensions:
+        return False
+
     return True
 
 def sanitize_sql_input(value: str) -> str:

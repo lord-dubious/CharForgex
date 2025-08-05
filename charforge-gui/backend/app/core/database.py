@@ -121,3 +121,6 @@ def get_db() -> Session:
         yield db
     finally:
         db.close()
+
+# Export SessionLocal for background tasks
+__all__ = ["Base", "engine", "SessionLocal", "get_db", "User", "Character", "TrainingSession", "InferenceSession", "AppSettings", "Dataset", "DatasetImage"]

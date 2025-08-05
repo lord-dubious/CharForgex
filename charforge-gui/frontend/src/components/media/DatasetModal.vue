@@ -294,7 +294,7 @@ const handleDrop = async (event: DragEvent) => {
 const uploadFiles = async (files: File[]) => {
   for (const file of files) {
     try {
-      await mediaApi.upload(file)
+      await mediaApi.uploadFile(file)
       toast.success(`Uploaded ${file.name}`)
     } catch (error) {
       toast.error(`Failed to upload ${file.name}`)

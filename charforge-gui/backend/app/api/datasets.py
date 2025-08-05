@@ -305,23 +305,27 @@ async def delete_dataset(
 
 async def process_dataset(dataset_id: int, user_id: int):
     """Background task to process dataset images."""
-    db = next(get_db())
-    
+    from app.core.database import SessionLocal
+
+    db = SessionLocal()
+    dataset = None
+
     try:
         dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
         if not dataset:
             return
-        
+
         # Update status to processing
         dataset.status = "processing"
         db.commit()
-        
+
         # Get dataset images
         images = db.query(DatasetImage).filter(
             DatasetImage.dataset_id == dataset_id
         ).all()
-        
+
         # Process each image
+        processed_count = 0
         for image in images:
             try:
                 # Generate caption if auto_caption is enabled
@@ -332,25 +336,35 @@ async def process_dataset(dataset_id: int, user_id: int):
                     # Use template with trigger word
                     caption = dataset.caption_template.replace("{trigger}", dataset.trigger_word)
                     image.caption = caption
-                
+
                 image.processed = True
-                db.commit()
-                
+                processed_count += 1
+
+                # Commit every 10 images to avoid long transactions
+                if processed_count % 10 == 0:
+                    db.commit()
+
             except Exception as e:
                 print(f"Error processing image {image.filename}: {e}")
                 continue
-        
+
+        # Final commit for remaining images
+        db.commit()
+
         # Update dataset status
         dataset.status = "ready"
         db.commit()
-        
+
     except Exception as e:
         # Update status to failed
-        if dataset:
-            dataset.status = "failed"
-            db.commit()
+        try:
+            if dataset:
+                dataset.status = "failed"
+                db.commit()
+        except Exception:
+            pass  # Ignore commit errors during error handling
         print(f"Error processing dataset {dataset_id}: {e}")
-    
+
     finally:
         db.close()
 

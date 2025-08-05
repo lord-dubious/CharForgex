@@ -84,52 +84,64 @@ async def upload_file(
             detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
         )
     
-    # Check file size by streaming to avoid memory issues
+    # Stream file directly to disk to avoid memory issues
+    user_dir = settings.MEDIA_DIR / str(current_user.id)
+    user_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate unique filename
+    unique_filename = generate_unique_filename(file.filename)
+    file_path = user_dir / unique_filename
+
+    # Stream file to disk with size checking
     file_size = 0
-    content_chunks = []
+    try:
+        with open(file_path, "wb") as buffer:
+            while True:
+                chunk = await file.read(8192)  # 8KB chunks
+                if not chunk:
+                    break
 
-    # Read file in chunks to avoid loading large files into memory
-    while True:
-        chunk = await file.read(8192)  # 8KB chunks
-        if not chunk:
-            break
-        content_chunks.append(chunk)
-        file_size += len(chunk)
+                file_size += len(chunk)
 
-        # Check size limit during streaming
-        if file_size > 50 * 1024 * 1024:  # 50MB limit
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail="File too large. Maximum size is 50MB."
-            )
+                # Check size limit during streaming
+                if file_size > MAX_FILE_SIZE:
+                    buffer.close()
+                    file_path.unlink()  # Delete partial file
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB"
+                    )
 
-    content = b''.join(content_chunks)
+                buffer.write(chunk)
+    except Exception as e:
+        # Clean up partial file on error
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save file: {str(e)}"
+        ) from e
 
-    # Validate file content for security
+    # Validate file content for security (read first chunk for validation)
+    with open(file_path, "rb") as f:
+        first_chunk = f.read(8192)
+
     from app.core.security import validate_file_upload
-    if not validate_file_upload(content, file.filename):
+    if not validate_file_upload(first_chunk, file.filename):
+        file_path.unlink()  # Delete the file
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid file content or potentially malicious file"
         )
-    
-    # Create user directory
-    user_dir = settings.MEDIA_DIR / str(current_user.id)
-    user_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Generate unique filename
-    unique_filename = generate_unique_filename(file.filename)
-    file_path = user_dir / unique_filename
-    
-    # Save file
+
+    # Save original filename metadata
+    meta_path = file_path.with_suffix(file_path.suffix + ".meta")
     try:
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to save file: {str(e)}"
-        )
+        with open(meta_path, "w", encoding="utf-8") as meta_file:
+            meta_file.write(file.filename)
+    except Exception:
+        # If metadata save fails, continue anyway
+        pass
     
     # Get image dimensions
     width, height = get_image_dimensions(str(file_path))
@@ -161,20 +173,36 @@ async def list_files(
     
     files = []
     for file_path in user_dir.iterdir():
-        if file_path.is_file() and is_allowed_file(file_path.name):
+        if file_path.is_file() and is_allowed_file(file_path.name) and not file_path.name.endswith('.meta'):
             try:
                 stat = file_path.stat()
                 width, height = get_image_dimensions(str(file_path))
-                
+
+                # Try to read original filename from metadata
+                meta_path = file_path.with_suffix(file_path.suffix + ".meta")
+                original_filename = file_path.name
+                if meta_path.exists():
+                    try:
+                        with open(meta_path, "r", encoding="utf-8") as meta_file:
+                            original_filename = meta_file.read().strip()
+                    except Exception:
+                        original_filename = file_path.name
+
+                # Determine proper content type
+                import mimetypes
+                content_type, _ = mimetypes.guess_type(file_path.name)
+                if content_type is None:
+                    content_type = "application/octet-stream"
+
                 file_url = f"/media/{current_user.id}/{file_path.name}"
-                
+
                 files.append(MediaResponse(
                     filename=file_path.name,
-                    original_filename=file_path.name,  # We don't store original names currently
+                    original_filename=original_filename,
                     file_path=str(file_path),
                     file_url=file_url,
                     file_size=stat.st_size,
-                    content_type="image/jpeg",  # Default, could be improved
+                    content_type=content_type,
                     width=width,
                     height=height
                 ))
