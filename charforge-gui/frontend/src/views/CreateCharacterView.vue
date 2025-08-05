@@ -526,8 +526,28 @@ const selectedTrainer = ref('lora')
 
 const canCreate = computed(() => {
   return form.value.name.trim() && form.value.triggerWord.trim() &&
-         (selectedImage.value || form.value.datasetId)
+         (selectedImage.value || form.value.datasetId) &&
+         validateTrainingParameters()
 })
+
+const validateTrainingParameters = () => {
+  // Validate basic parameters
+  if (form.value.steps < 100 || form.value.steps > 10000) return false
+  if (form.value.learning_rate < 0.0001 || form.value.learning_rate > 0.01) return false
+  if (form.value.batch_size < 1 || form.value.batch_size > 16) return false
+  if (form.value.rank_dim < 4 || form.value.rank_dim > 256) return false
+  if (form.value.train_dim < 256 || form.value.train_dim > 2048) return false
+
+  // Validate MV Adapter if enabled
+  if (form.value.mvAdapterConfig.enabled) {
+    if (form.value.mvAdapterConfig.numViews < 4 || form.value.mvAdapterConfig.numViews > 12) return false
+    if (form.value.mvAdapterConfig.guidanceScale < 1.0 || form.value.mvAdapterConfig.guidanceScale > 20.0) return false
+    if (form.value.mvAdapterConfig.height < 512 || form.value.mvAdapterConfig.height > 2048) return false
+    if (form.value.mvAdapterConfig.width < 512 || form.value.mvAdapterConfig.width > 2048) return false
+  }
+
+  return true
+}
 
 const loadMediaFiles = async () => {
   try {

@@ -58,9 +58,29 @@ def get_image_dimensions(file_path: str) -> tuple:
     except Exception:
         return None, None
 
+def validate_filename(filename: str) -> str:
+    """Validate and sanitize filename to prevent path traversal."""
+    if not filename:
+        raise ValueError("Filename cannot be empty")
+
+    # Remove any path components
+    filename = os.path.basename(filename)
+
+    # Check for path traversal attempts
+    if '..' in filename or '/' in filename or '\\' in filename:
+        raise ValueError("Invalid filename: path traversal detected")
+
+    # Check for hidden files or system files
+    if filename.startswith('.') or filename.startswith('~'):
+        raise ValueError("Invalid filename: hidden or system files not allowed")
+
+    return filename
+
 def generate_unique_filename(original_filename: str) -> str:
     """Generate a unique filename while preserving extension."""
-    ext = get_file_extension(original_filename)
+    # Validate the original filename first
+    safe_filename = validate_filename(original_filename)
+    ext = get_file_extension(safe_filename)
     unique_id = str(uuid.uuid4())
     return f"{unique_id}{ext}"
 

@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 import os
 from pathlib import Path
 
@@ -33,6 +34,30 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler for better error reporting."""
+    import logging
+    import traceback
+
+    # Log the error
+    logging.error(f"Global exception on {request.url}: {str(exc)}")
+    logging.error(traceback.format_exc())
+
+    # Return appropriate error response
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail}
+        )
+
+    # For unexpected errors, return generic message
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
 
 # Add security middleware
 app.middleware("http")(rate_limit_middleware)

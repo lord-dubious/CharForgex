@@ -217,7 +217,60 @@ async def start_training(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Training session already in progress"
         )
-    
+
+    # Enhanced validation for training parameters
+    if request.steps < 100 or request.steps > 10000:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Steps must be between 100 and 10000"
+        )
+
+    if request.learning_rate < 1e-6 or request.learning_rate > 1e-2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Learning rate must be between 1e-6 and 1e-2"
+        )
+
+    if request.batch_size < 1 or request.batch_size > 16:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Batch size must be between 1 and 16"
+        )
+
+    if request.rank_dim < 4 or request.rank_dim > 256:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rank dimension must be between 4 and 256"
+        )
+
+    if request.train_dim < 256 or request.train_dim > 2048:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Train dimension must be between 256 and 2048"
+        )
+
+    # Validate model configuration if provided
+    if request.model_config:
+        if request.model_config.dtype not in ["float16", "float32", "bfloat16"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid data type. Must be float16, float32, or bfloat16"
+            )
+
+    # Validate MV Adapter configuration if enabled
+    if request.mv_adapter_config and request.mv_adapter_config.enabled:
+        if request.mv_adapter_config.num_views < 4 or request.mv_adapter_config.num_views > 12:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Number of views must be between 4 and 12"
+            )
+
+        if request.mv_adapter_config.guidance_scale < 1.0 or request.mv_adapter_config.guidance_scale > 20.0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Guidance scale must be between 1.0 and 20.0"
+            )
+
     # Create training session
     training_session = TrainingSession(
         character_id=character_id,
