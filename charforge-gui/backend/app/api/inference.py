@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 from app.core.database import get_db, Character, InferenceJob, User
-from app.core.auth import get_current_active_user
+from app.core.auth import get_current_active_user, get_current_user_optional
 from app.services.charforge_integration import CharForgeIntegration, InferenceConfig
 from app.services.settings_service import get_user_env_vars
 
@@ -138,15 +138,15 @@ async def run_inference_background(
             character_name=character.name,
             prompt=request.prompt,
             work_dir=character.work_dir,
-            lora_weight=request.lora_weight,
-            test_dim=request.test_dim,
-            do_optimize_prompt=request.do_optimize_prompt,
+            lora_weight=request.lora_weight or 0.73,
+            test_dim=request.test_dim or 1024,
+            do_optimize_prompt=request.do_optimize_prompt if request.do_optimize_prompt is not None else True,
             output_filenames=request.output_filenames,
-            batch_size=request.batch_size,
-            num_inference_steps=request.num_inference_steps,
-            fix_outfit=request.fix_outfit,
-            safety_check=request.safety_check,
-            face_enhance=request.face_enhance
+            batch_size=request.batch_size or 4,
+            num_inference_steps=request.num_inference_steps or 30,
+            fix_outfit=request.fix_outfit if request.fix_outfit is not None else False,
+            safety_check=request.safety_check if request.safety_check is not None else True,
+            face_enhance=request.face_enhance if request.face_enhance is not None else False
         )
         
         # Run inference
@@ -187,7 +187,7 @@ async def list_inference_jobs(
     limit: int = 50,
     offset: int = 0,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """List inference jobs for the current user."""
     
@@ -230,7 +230,7 @@ async def list_inference_jobs(
 async def get_inference_job(
     job_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get a specific inference job."""
     
@@ -268,7 +268,7 @@ async def get_inference_job(
 async def get_character_info(
     character_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get detailed information about a character including LoRA status."""
     
@@ -302,7 +302,7 @@ async def get_character_info(
 @router.get("/available-characters")
 async def list_available_characters(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """List all characters available for inference (completed training)."""
     

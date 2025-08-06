@@ -42,15 +42,15 @@ cd backend
 # Create virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
     echo "Creating Python virtual environment..."
-    python3 -m venv venv
+   uv venv
 fi
 
 # Activate virtual environment
-source venv/bin/activate
+source .venv/bin/activate
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 
 # Create .env file if it doesn't exist
 if [ ! -f ".env" ]; then
@@ -92,8 +92,8 @@ LOCAL_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "localhost")
 # Start backend in background
 echo "Starting FastAPI backend..."
 cd backend
-source venv/bin/activate
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
+source .venv/bin/activate
+uvicorn app.main:app --reload --reload-dir app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 cd ..
 

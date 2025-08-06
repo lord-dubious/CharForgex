@@ -158,7 +158,7 @@ async def create_character(
 @router.get("/characters", response_model=List[CharacterResponse])
 async def list_characters(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """List all characters for the current user."""
     characters = db.query(Character).filter(Character.user_id == current_user.id).all()
@@ -219,31 +219,37 @@ async def start_training(
         )
 
     # Enhanced validation for training parameters
-    if request.steps < 100 or request.steps > 10000:
+    steps = request.steps or 800
+    learning_rate = request.learning_rate or 8e-4
+    batch_size = request.batch_size or 1
+    rank_dim = request.rank_dim or 8
+    train_dim = request.train_dim or 512
+    
+    if steps < 100 or steps > 10000:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Steps must be between 100 and 10000"
         )
 
-    if request.learning_rate < 1e-6 or request.learning_rate > 1e-2:
+    if learning_rate < 1e-6 or learning_rate > 1e-2:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Learning rate must be between 1e-6 and 1e-2"
         )
 
-    if request.batch_size < 1 or request.batch_size > 16:
+    if batch_size < 1 or batch_size > 16:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Batch size must be between 1 and 16"
         )
 
-    if request.rank_dim < 4 or request.rank_dim > 256:
+    if rank_dim < 4 or rank_dim > 256:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Rank dimension must be between 4 and 256"
         )
 
-    if request.train_dim < 256 or request.train_dim > 2048:
+    if train_dim < 256 or train_dim > 2048:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Train dimension must be between 256 and 2048"
@@ -327,22 +333,22 @@ async def run_training_background(
             name=character.name,
             input_image=character.input_image_path,
             work_dir=character.work_dir,
-            steps=request.steps,
-            batch_size=request.batch_size,
-            learning_rate=request.learning_rate,
-            train_dim=request.train_dim,
-            rank_dim=request.rank_dim,
-            pulidflux_images=request.pulidflux_images,
+            steps=steps,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            train_dim=train_dim,
+            rank_dim=rank_dim,
+            pulidflux_images=request.pulidflux_images or 0,
 
             # Model configuration
-            model_config=request.model_config,
-            mv_adapter_config=request.mv_adapter_config,
-            advanced_config=request.advanced_config,
+            model_config=request.model_config or ModelConfig(),
+            mv_adapter_config=request.mv_adapter_config or MVAdapterConfig(),
+            advanced_config=request.advanced_config or AdvancedTrainingConfig(),
 
             # ComfyUI model paths
-            comfyui_checkpoint=request.comfyui_checkpoint,
-            comfyui_vae=request.comfyui_vae,
-            comfyui_lora=request.comfyui_lora
+            comfyui_checkpoint=request.comfyui_checkpoint or "",
+            comfyui_vae=request.comfyui_vae or "",
+            comfyui_lora=request.comfyui_lora or ""
         )
         
         # Progress callback

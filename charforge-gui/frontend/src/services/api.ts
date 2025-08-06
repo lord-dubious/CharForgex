@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios'
+import axios, { AxiosInstance } from 'axios'
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -268,4 +268,5 @@ export const datasetApi = {
     api.delete(`/datasets/datasets/${id}`).then(res => res.data),
 }
 
+export { api }
 export default api

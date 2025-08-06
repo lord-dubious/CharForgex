@@ -17,3 +17,4 @@ httpx==0.25.2
 cryptography==41.0.7
 requests==2.31.0
 slowapi==0.1.9
+pydantic[email]

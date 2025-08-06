@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import os
 from pathlib import Path
 
@@ -30,7 +30,7 @@ class TrainerInfo(BaseModel):
     name: str
     type: str
     description: str
-    parameters: Dict[str, any]
+    parameters: Dict[str, Any]
 
 class TrainerListResponse(BaseModel):
     trainers: List[TrainerInfo]

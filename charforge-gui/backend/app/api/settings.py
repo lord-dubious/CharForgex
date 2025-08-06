@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Dict, Optional
 
 from app.core.database import get_db, User
-from app.core.auth import get_current_active_user
+from app.core.auth import get_current_active_user, get_current_user_optional
 from app.services.settings_service import (
     save_user_setting,
     get_user_setting,
@@ -72,7 +72,7 @@ async def save_setting(
 async def get_setting(
     key: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get a specific user setting."""
     
@@ -93,7 +93,7 @@ async def get_setting(
 @router.get("/settings")
 async def get_all_settings(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get all user settings."""
     
@@ -155,7 +155,7 @@ async def save_environment_settings(
 @router.get("/environment", response_model=EnvironmentSettingsResponse)
 async def get_environment_settings(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get environment settings for CharForge."""
     
@@ -172,7 +172,7 @@ async def get_environment_settings(
 @router.post("/test-environment")
 async def test_environment_settings(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Test environment settings by validating API keys."""
     

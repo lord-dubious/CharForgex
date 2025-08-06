@@ -24,7 +24,7 @@
     "tailwindcss-animate": "^1.0.7",
     "@tanstack/vue-query": "^5.17.0",
     "vue-toastification": "^2.0.0-rc.5",
-    "dropzone-vue": "^1.0.2",
+    "dropzone-vue": "*",
     "@headlessui/vue": "^1.7.16"
   },
   "devDependencies": {
