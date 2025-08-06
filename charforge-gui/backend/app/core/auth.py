@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
 from app.core.database import get_db, User
@@ -159,20 +160,31 @@ async def get_current_user_optional(db: Session = Depends(get_db)) -> User:
     from app.core.config import settings
 
     if not settings.ENABLE_AUTH:
-        # When auth is disabled, return default user or create one
+        # When auth is disabled, return default user or create one (thread-safe)
         default_user = db.query(User).filter(User.id == settings.DEFAULT_USER_ID).first()
         if not default_user:
-            # Create default user if it doesn't exist
-            default_user = User(
-                id=settings.DEFAULT_USER_ID,
-                username="default_user",
-                email="default@charforge.local",
-                hashed_password="",  # No password needed when auth is disabled
-                is_active=True
-            )
-            db.add(default_user)
-            db.commit()
-            db.refresh(default_user)
+            try:
+                # Create default user if it doesn't exist
+                default_user = User(
+                    id=settings.DEFAULT_USER_ID,
+                    username="default_user",
+                    email="default@charforge.local",
+                    hashed_password="",  # No password needed when auth is disabled
+                    is_active=True
+                )
+                db.add(default_user)
+                db.commit()
+                db.refresh(default_user)
+            except IntegrityError:
+                # Another request created the user, rollback and fetch it
+                db.rollback()
+                default_user = db.query(User).filter(User.id == settings.DEFAULT_USER_ID).first()
+                if not default_user:
+                    # This should not happen, but handle it gracefully
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to create or retrieve default user"
+                    )
         return default_user
     else:
         # When auth is enabled, use normal authentication

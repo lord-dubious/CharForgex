@@ -42,19 +42,39 @@ export const useAuthStore = defineStore('auth', () => {
   // Actions
   const checkAuthEnabled = async () => {
     try {
-      // Try to access auth endpoint to see if it exists
-      await fetch('/api/auth/me', { method: 'GET' })
-      authEnabled.value = true
-    } catch (error) {
-      // If auth endpoint doesn't exist, auth is disabled
-      authEnabled.value = false
-      // Set a default user when auth is disabled
-      user.value = {
-        id: 1,
-        username: 'default_user',
-        email: 'default@charforge.local',
-        is_active: true
+      // Use dedicated config endpoint to check auth status
+      const response = await fetch('/api/auth/config', { method: 'GET' })
+
+      if (response.ok) {
+        const config = await response.json()
+        authEnabled.value = config.auth_enabled
+
+        // Set a default user when auth is disabled
+        if (!config.auth_enabled) {
+          user.value = {
+            id: 1,
+            username: 'default_user',
+            email: 'default@charforge.local',
+            is_active: true
+          }
+        }
+      } else if (response.status === 404) {
+        // Config endpoint doesn't exist, assume auth is disabled
+        authEnabled.value = false
+        user.value = {
+          id: 1,
+          username: 'default_user',
+          email: 'default@charforge.local',
+          is_active: true
+        }
+      } else {
+        // Server error, assume auth is enabled for safety
+        authEnabled.value = true
       }
+    } catch (error) {
+      // Network error, assume auth is enabled for safety
+      console.warn('Failed to check auth config, assuming auth is enabled:', error)
+      authEnabled.value = true
     }
   }
 
