@@ -3,6 +3,11 @@ from typing import List
 import os
 from pathlib import Path
 
+def _parse_bool_env(var_name: str, default: str = "false") -> bool:
+    """Parse boolean environment variable with multiple valid representations."""
+    val = os.getenv(var_name, default)
+    return str(val).strip().lower() in {"1", "true", "yes", "on"}
+
 class Settings(BaseSettings):
     # API Configuration
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
@@ -10,12 +15,6 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # Authentication (Optional - disabled by default)
-    @staticmethod
-    def _parse_bool_env(var_name: str, default: str = "false") -> bool:
-        """Parse boolean environment variable with multiple valid representations."""
-        val = os.getenv(var_name, default)
-        return str(val).strip().lower() in {"1", "true", "yes", "on"}
-
     ENABLE_AUTH: bool = _parse_bool_env("ENABLE_AUTH", "false")
     ALLOW_REGISTRATION: bool = _parse_bool_env("ALLOW_REGISTRATION", "false")
     DEFAULT_USER_ID: int = int(os.getenv("DEFAULT_USER_ID", "1"))  # Used when auth is disabled
