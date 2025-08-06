@@ -9,10 +9,12 @@ A beautiful Vue.js frontend with FastAPI backend for controlling the CharForge A
 - Dark/light mode support
 - Accessible components following design system principles
 
-### 🔐 **Authentication & Security**
-- JWT-based authentication
-- Secure API key storage with encryption
-- User management with SQLite database
+### 🔐 **Authentication & Security (Optional)**
+- **Optional Authentication**: Enable/disable user authentication via environment variable
+- **Default Mode**: No authentication required - perfect for local/personal use
+- **Secure Mode**: JWT-based authentication when enabled
+- **Flexible Configuration**: Toggle registration and set default users
+- **Secure API**: Rate limiting and security headers included
 
 ### 🎯 **Core Functionality**
 - **Character Management**: Create, view, and manage AI characters
@@ -94,6 +96,35 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## Authentication Configuration (Optional)
+
+**By default, authentication is DISABLED** for ease of use. The application works without any login/signup process.
+
+### Default Mode (No Authentication)
+- ✅ No login/signup required
+- ✅ All features work immediately
+- ✅ Uses a default user account automatically
+- ✅ Perfect for local/personal use
+
+### Secure Mode (Authentication Enabled)
+To enable authentication, set these environment variables:
+
+```bash
+# Enable authentication and registration
+ENABLE_AUTH=true
+ALLOW_REGISTRATION=true
+
+# Or just enable auth without registration
+ENABLE_AUTH=true
+ALLOW_REGISTRATION=false
+```
+
+When enabled:
+- 🔐 Users must register/login
+- 👥 Multi-user support
+- 🛡️ Secure JWT-based authentication
+- 🔒 User isolation and data protection
 
 ## Environment Configuration
 

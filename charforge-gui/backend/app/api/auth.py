@@ -15,6 +15,15 @@ from app.core.config import settings
 
 router = APIRouter()
 
+# Config endpoint (always available)
+@router.get("/config")
+async def get_auth_config():
+    """Get authentication configuration."""
+    return {
+        "auth_enabled": settings.ENABLE_AUTH,
+        "registration_enabled": settings.ALLOW_REGISTRATION
+    }
+
 # Pydantic models
 class UserCreate(BaseModel):
     username: str
@@ -40,6 +49,20 @@ class TokenData(BaseModel):
 @router.post("/register", response_model=UserResponse)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user."""
+
+    # Check if authentication is enabled
+    if not settings.ENABLE_AUTH:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Authentication is disabled"
+        )
+
+    # Check if registration is allowed
+    if not settings.ALLOW_REGISTRATION:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is disabled"
+        )
     try:
         user = create_user(
             db=db,
@@ -59,6 +82,14 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """Login and get access token."""
+
+    # Check if authentication is enabled
+    if not settings.ENABLE_AUTH:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Authentication is disabled"
+        )
+
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(

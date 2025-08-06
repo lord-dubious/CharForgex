@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from app.core.database import get_db, User
-from app.core.auth import get_current_active_user
+from app.core.auth import get_current_active_user, get_current_user_optional
 from app.core.config import settings
 
 router = APIRouter()
@@ -37,7 +37,7 @@ class TrainerListResponse(BaseModel):
 
 @router.get("/models", response_model=ModelListResponse)
 async def list_available_models(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get all available models from ComfyUI and other sources."""
     
@@ -127,7 +127,7 @@ async def list_available_models(
 
 @router.get("/trainers", response_model=TrainerListResponse)
 async def list_available_trainers(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get all available training methods and their parameters."""
     
@@ -182,7 +182,7 @@ async def list_available_trainers(
 
 @router.get("/schedulers")
 async def list_schedulers(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get available noise schedulers."""
     
@@ -200,7 +200,7 @@ async def list_schedulers(
 
 @router.get("/optimizers")
 async def list_optimizers(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get available optimizers."""
     
@@ -217,7 +217,7 @@ async def list_optimizers(
 @router.post("/validate-model")
 async def validate_model_path(
     model_path: str,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Validate if a model path exists and is accessible."""
     

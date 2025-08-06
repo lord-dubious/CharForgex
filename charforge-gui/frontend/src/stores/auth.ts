@@ -30,12 +30,62 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const token = ref<string | null>(null)
   const isLoading = ref(false)
-  
+  const authEnabled = ref<boolean>(true) // Will be set based on backend config
+
   // Getters
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
+  const isAuthenticated = computed(() => {
+    // If auth is disabled, always return true
+    if (!authEnabled.value) return true
+    return !!token.value && !!user.value
+  })
   
   // Actions
+  const checkAuthEnabled = async () => {
+    try {
+      // Use dedicated config endpoint to check auth status
+      const response = await fetch('/api/auth/config', { method: 'GET' })
+
+      if (response.ok) {
+        const config = await response.json()
+        authEnabled.value = config.auth_enabled
+
+        // Set a default user when auth is disabled
+        if (!config.auth_enabled) {
+          user.value = {
+            id: 1,
+            username: 'default_user',
+            email: 'default@charforge.local',
+            is_active: true
+          }
+        }
+      } else if (response.status === 404) {
+        // Config endpoint doesn't exist, assume auth is disabled
+        authEnabled.value = false
+        user.value = {
+          id: 1,
+          username: 'default_user',
+          email: 'default@charforge.local',
+          is_active: true
+        }
+      } else {
+        // Server error, assume auth is enabled for safety
+        authEnabled.value = true
+      }
+    } catch (error) {
+      // Network error, assume auth is enabled for safety
+      console.warn('Failed to check auth config, assuming auth is enabled:', error)
+      authEnabled.value = true
+    }
+  }
+
   const initializeAuth = async () => {
+    await checkAuthEnabled()
+
+    if (!authEnabled.value) {
+      // Auth is disabled, no need to check tokens
+      return
+    }
+
     const savedToken = localStorage.getItem('auth_token')
     if (savedToken) {
       token.value = savedToken
@@ -107,12 +157,14 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     token,
     isLoading,
-    
+    authEnabled,
+
     // Getters
     isAuthenticated,
-    
+
     // Actions
     initializeAuth,
+    checkAuthEnabled,
     login,
     register,
     logout,

@@ -73,7 +73,11 @@ app.mount("/media", StaticFiles(directory=settings.MEDIA_DIR), name="media")
 app.mount("/results", StaticFiles(directory=settings.RESULTS_DIR), name="results")
 
 # Include routers
+# Always include auth config endpoint, conditionally include other auth routes
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+
+# Note: The auth router now includes conditional logic for auth-only endpoints
+
 app.include_router(training.router, prefix="/api/training", tags=["training"])
 app.include_router(inference.router, prefix="/api/inference", tags=["inference"])
 app.include_router(media.router, prefix="/api/media", tags=["media"])
