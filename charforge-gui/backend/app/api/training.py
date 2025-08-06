@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from app.core.database import get_db, Character, TrainingSession, User
-from app.core.auth import get_current_active_user
+from app.core.auth import get_current_active_user, get_current_user_optional
 from app.services.charforge_integration import CharForgeIntegration, CharacterConfig
 from app.services.settings_service import get_user_env_vars
 
@@ -190,7 +190,7 @@ async def start_training(
     request: TrainingRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Start training for a character."""
     

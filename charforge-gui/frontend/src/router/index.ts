@@ -89,9 +89,26 @@ const router = createRouter({
 })
 
 // Navigation guards
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  
+
+  // Initialize auth if not already done
+  if (!authStore.user && !authStore.isLoading) {
+    await authStore.initializeAuth()
+  }
+
+  // If auth is disabled, allow all routes
+  if (!authStore.authEnabled) {
+    // Skip login/register routes when auth is disabled
+    if (to.path === '/login' || to.path === '/register') {
+      next('/')
+      return
+    }
+    next()
+    return
+  }
+
+  // Check if route requires authentication (when auth is enabled)
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {

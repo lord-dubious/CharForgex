@@ -10,7 +10,7 @@ import uuid
 from PIL import Image
 
 from app.core.database import get_db, User
-from app.core.auth import get_current_active_user
+from app.core.auth import get_current_active_user, get_current_user_optional
 from app.core.config import settings
 
 router = APIRouter()
@@ -87,7 +87,7 @@ def generate_unique_filename(original_filename: str) -> str:
 @router.post("/upload", response_model=MediaResponse)
 async def upload_file(
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Upload a media file."""
     
@@ -182,7 +182,7 @@ async def upload_file(
 
 @router.get("/files", response_model=MediaListResponse)
 async def list_files(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """List all uploaded files for the current user."""
     
@@ -237,7 +237,7 @@ async def list_files(
 @router.get("/files/{filename}")
 async def get_file(
     filename: str,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get a specific file."""
 

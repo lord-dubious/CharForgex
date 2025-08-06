@@ -9,6 +9,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    # Authentication (Optional - disabled by default)
+    ENABLE_AUTH: bool = os.getenv("ENABLE_AUTH", "false").lower() == "true"
+    ALLOW_REGISTRATION: bool = os.getenv("ALLOW_REGISTRATION", "false").lower() == "true"
+    DEFAULT_USER_ID: int = int(os.getenv("DEFAULT_USER_ID", "1"))  # Used when auth is disabled
+
     def __post_init__(self):
         """Validate critical settings after initialization."""
         if not self.SECRET_KEY or len(self.SECRET_KEY) < 32:

@@ -36,13 +36,13 @@
           </div>
           
           <div class="flex items-center space-x-4">
-            <!-- User menu -->
-            <div class="relative">
+            <!-- User menu (only show when auth is enabled) -->
+            <div v-if="authStore.authEnabled" class="relative">
               <Button @click="showUserMenu = !showUserMenu" variant="ghost" size="sm">
                 <User class="h-4 w-4 mr-2" />
                 {{ authStore.user?.username }}
               </Button>
-              
+
               <div
                 v-if="showUserMenu"
                 class="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-md shadow-lg z-50"
@@ -63,6 +63,12 @@
                   </button>
                 </div>
               </div>
+            </div>
+
+            <!-- Show simple user indicator when auth is disabled -->
+            <div v-else class="flex items-center text-sm text-muted-foreground">
+              <User class="h-4 w-4 mr-2" />
+              CharForge User
             </div>
           </div>
         </div>

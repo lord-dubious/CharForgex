@@ -153,3 +153,27 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+async def get_current_user_optional(db: Session = Depends(get_db)) -> User:
+    """Get current user when authentication is optional."""
+    from app.core.config import settings
+
+    if not settings.ENABLE_AUTH:
+        # When auth is disabled, return default user or create one
+        default_user = db.query(User).filter(User.id == settings.DEFAULT_USER_ID).first()
+        if not default_user:
+            # Create default user if it doesn't exist
+            default_user = User(
+                id=settings.DEFAULT_USER_ID,
+                username="default_user",
+                email="default@charforge.local",
+                hashed_password="",  # No password needed when auth is disabled
+                is_active=True
+            )
+            db.add(default_user)
+            db.commit()
+            db.refresh(default_user)
+        return default_user
+    else:
+        # When auth is enabled, use normal authentication
+        return await get_current_active_user()

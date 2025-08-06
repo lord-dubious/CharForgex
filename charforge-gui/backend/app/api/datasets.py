@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import datetime
 
 from app.core.database import get_db, Dataset, DatasetImage, User
-from app.core.auth import get_current_active_user
+from app.core.auth import get_current_active_user, get_current_user_optional
 from app.core.config import settings
 
 router = APIRouter()
@@ -63,7 +63,7 @@ async def create_dataset(
     request: DatasetCreateRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Create a new dataset from selected images."""
     
@@ -142,7 +142,7 @@ async def create_dataset(
 @router.get("/datasets", response_model=DatasetListResponse)
 async def list_datasets(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get all datasets for the current user."""
     
@@ -159,7 +159,7 @@ async def list_datasets(
 async def get_dataset(
     dataset_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get a specific dataset."""
     
@@ -180,7 +180,7 @@ async def get_dataset(
 async def get_dataset_images(
     dataset_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Get all images in a dataset."""
     
@@ -207,7 +207,7 @@ async def update_trigger_word(
     dataset_id: int,
     request: TriggerWordUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Update the trigger word for a dataset."""
     
@@ -240,7 +240,7 @@ async def update_image_caption(
     image_id: int,
     request: CaptionUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Update the caption for a specific image in a dataset."""
     
@@ -277,7 +277,7 @@ async def update_image_caption(
 async def delete_dataset(
     dataset_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Delete a dataset and all its images."""
     
