@@ -1,30 +1,6 @@
 # AI-Powered Character LoRA Creation
 
-CharForge is a powerful, automated pipeline for creating high-quality character LoRAs (Low-Rank Adaptations) for Stable Diffusion. It streamlines the entire process, from generating a character sheet to training the LoRA, making it easy to bring your characters to life.
-
-<div style="display: flex; gap: 1px; align-items: flex-start;">
-  <img src="examples/example1.jpg" alt="Example 1" width="400"/>
-  <img src="examples/example2.jpg" alt="Example 2" width="400"/>
-</div>
-
-## Features
-
-*   **Character Sheet Generation**: Generate a diverse character sheet from a _single reference image_
-*   **Automatic Captioning**: Generate detailed captions for training images using Google GenAI.
-*   **LoRA Training**: Train high-quality character LoRAs
-*   **Easy Inference**: Generate images of your character in various scenarios
-
-<div style="text-align: center;">
-  <img src="examples/trainlora.jpg" alt="Train LoRA" width="800"/>
-</div>
-
-## Examples
-
-<div style="text-align: center;">
-  <img src="examples/three_examples.jpeg" alt="Train LoRA" width="800"/>
-</div>
-
-## Installation
+l
 
 ### Prerequisites
 *   Python 3.10 or higher
@@ -55,8 +31,7 @@ CharForge is a powerful, automated pipeline for creating high-quality character 
     ```
 
     This will:
-    - Install submodules including [ComfyUI](https://github.com/RishiDesai/ComfyUI.git), all required ComfyUI custom nodes, [LoRACaptioner](https://github.com/RishiDesai/LoRACaptioner.git), [MVAdapter](https://github.com/RishiDesai/MV-Adapter.git), and [ai-toolkit](https://github.com/ostris/ai-toolkit.git).
-    - <details>
+    - 
         <summary>Show all ComfyUI custom nodes</summary>
 
         - comfyui_essentials
