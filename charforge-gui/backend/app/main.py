@@ -20,6 +20,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
+@app.on_event("startup")
+async def startup_event():
+    """Import existing datasets from scratch folder when auth is disabled."""
+    if not settings.ENABLE_AUTH:
+        from app.services.dataset_import import import_datasets_from_scratch
+        from app.core.database import SessionLocal
+        db = SessionLocal()
+        try:
+            import_datasets_from_scratch(db, settings.DEFAULT_USER_ID)
+        finally:
+            db.close()
+
 # CORS configuration - Enhanced for remote access
 # Only allow all origins in development mode
 cors_origins = settings.ALLOWED_ORIGINS
