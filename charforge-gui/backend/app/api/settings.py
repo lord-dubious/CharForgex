@@ -138,14 +138,44 @@ async def save_environment_settings(
     # Save each environment variable
     env_vars = request.dict()
     
+    # Only save non-None values for environment variables
     for key, value in env_vars.items():
-        if value is not None:  # Only save non-None values
+        if value is not None:
             is_sensitive = key in SENSITIVE_KEYS
             await save_user_setting(
                 user_id=current_user.id,
                 key=key,
                 value=value,
                 is_sensitive=is_sensitive,
+                db=db
+            )
+    
+    # Special handling for model URLs - ensure they're stored with original model names
+    model_settings = {
+        'TRAINING_MODEL_URL': 'black-forest-labs/FLUX.1-Krea-dev',
+        'MV_ADAPTER_URL': 'mv-adapter/model',
+        'MV_ADAPTER_LORA_URLS': 'mv-adapter/loras',
+        'COMFYUI_URL': 'comfyui/models',
+        'CAPTIONING_SYSTEM_PROMPT': 'You are an AI assistant that creates detailed image captions. Describe the subject, style, lighting, and composition in a single paragraph.',
+        'GENERATION_SYSTEM_PROMPT': 'You are an AI image generator assistant. Create detailed prompts for image generation based on character descriptions.'
+    }
+    
+    for setting_key, original_name in model_settings.items():
+        if hasattr(request, setting_key) and getattr(request, setting_key):
+            # Save the URL setting
+            await save_user_setting(
+                user_id=current_user.id,
+                key=setting_key,
+                value=getattr(request, setting_key),
+                is_sensitive=False,
+                db=db
+            )
+            # Also save the original model name for registry
+            await save_user_setting(
+                user_id=current_user.id,
+                key=f"{setting_key}_ORIGINAL",
+                value=original_name,
+                is_sensitive=False,
                 db=db
             )
     
@@ -166,7 +196,8 @@ async def get_environment_settings(
         HF_HOME=settings.get('HF_HOME', ''),
         CIVITAI_API_KEY=settings.get('CIVITAI_API_KEY', ''),
         GOOGLE_API_KEY=settings.get('GOOGLE_API_KEY', ''),
-        FAL_KEY=settings.get('FAL_KEY', '')
+        FAL_KEY=settings.get('FAL_KEY', ''),
+        MV_ADAPTER_LORA_URLS=settings.get('MV_ADAPTER_LORA_URLS', '')
     )
 
 @router.post("/test-environment")
