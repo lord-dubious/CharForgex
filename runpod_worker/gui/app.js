@@ -341,7 +341,21 @@ createApp({
         
         downloadImage(image, index) {
             const link = document.createElement('a');
-            link.href = `data:image/jpeg;base64,${image.image_data}`;
+
+            // Determine MIME type
+            let mimeType = 'image/jpeg';
+            if (image.mime_type) {
+                mimeType = image.mime_type;
+            } else if (image.filename) {
+                const ext = image.filename.split('.').pop().toLowerCase();
+                if (ext === 'png') mimeType = 'image/png';
+                else if (ext === 'gif') mimeType = 'image/gif';
+                else if (ext === 'bmp') mimeType = 'image/bmp';
+                else if (ext === 'webp') mimeType = 'image/webp';
+                // Add more types as needed
+            }
+
+            link.href = `data:${mimeType};base64,${image.image_data}`;
             link.download = image.filename || `generated_image_${index + 1}.jpg`;
             document.body.appendChild(link);
             link.click();

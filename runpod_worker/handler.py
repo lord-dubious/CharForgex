@@ -107,9 +107,16 @@ class CharForgeHandler:
 
             # Check minimum memory requirements
             min_memory_gb = 20  # Minimum 20GB for basic operations
-            available_memory_gb = gpu_info.get('memory_total', 0) / (1024**3)
+            memory_total = gpu_info.get('memory_total', 0)
 
-            if available_memory_gb < min_memory_gb:
+            # Validate memory_total exists and is valid
+            if not isinstance(memory_total, (int, float)) or memory_total <= 0:
+                logger.warning("GPU memory information not available or invalid")
+                available_memory_gb = 0
+            else:
+                available_memory_gb = memory_total / (1024**3)
+
+            if available_memory_gb > 0 and available_memory_gb < min_memory_gb:
                 logger.warning(f"GPU memory ({available_memory_gb:.1f}GB) is below recommended minimum ({min_memory_gb}GB)")
 
             self.is_initialized = True
@@ -248,19 +255,23 @@ class CharForgeHandler:
             if not lora_files:
                 raise RuntimeError("No valid LoRA files found after training")
 
-            # Copy LoRA to persistent storage with backup
+            # Copy all valid LoRA files to persistent storage with backup
             import shutil
-            lora_file = lora_files[0]  # Take the first valid LoRA file
-            persistent_lora_path = os.path.join(persistent_lora_dir, os.path.basename(lora_file))
+            saved_loras = []
+            for lora_file in lora_files:
+                persistent_lora_path = os.path.join(persistent_lora_dir, os.path.basename(lora_file))
 
-            # Create backup if file already exists
-            if os.path.exists(persistent_lora_path):
-                backup_path = f"{persistent_lora_path}.backup_{int(time.time())}"
-                shutil.copy2(persistent_lora_path, backup_path)
-                logger.info(f"Created backup: {backup_path}")
+                # Create backup if file already exists
+                if os.path.exists(persistent_lora_path):
+                    backup_path = f"{persistent_lora_path}.backup_{int(time.time())}"
+                    shutil.copy2(persistent_lora_path, backup_path)
+                    logger.info(f"Created backup: {backup_path}")
 
-            shutil.copy2(lora_file, persistent_lora_path)
-            logger.info(f"LoRA saved to persistent storage: {persistent_lora_path}")
+                shutil.copy2(lora_file, persistent_lora_path)
+                saved_loras.append(persistent_lora_path)
+                logger.info(f"LoRA saved to persistent storage: {persistent_lora_path}")
+
+            logger.info(f"Saved {len(saved_loras)} LoRA files to persistent storage")
 
             # Save training metadata
             metadata = {
@@ -359,10 +370,15 @@ class CharForgeHandler:
             import re
             character_name = re.sub(r'[^\w\-_]', '_', character_name)
 
-            # Validate character exists
+            # Validate character exists and has LoRA files
             character_lora_dir = get_persistent_path(f'loras/{character_name}')
             if not os.path.exists(character_lora_dir):
                 raise ValueError(f"Character '{character_name}' not found. Available characters: {self.get_available_character_names()}")
+
+            # Check for actual LoRA files
+            lora_files = [f for f in os.listdir(character_lora_dir) if f.endswith(('.safetensors', '.pt', '.bin'))]
+            if not lora_files:
+                raise ValueError(f"Character '{character_name}' directory exists but contains no LoRA files")
 
             # Initialize image generator if needed with retry logic
             max_retries = 3
@@ -431,6 +447,7 @@ class CharForgeHandler:
 
             # Encode images to base64 with error handling
             images_b64 = []
+            encoding_errors = []
             for file_path in valid_files:
                 try:
                     image_b64 = encode_image_to_base64(file_path)
@@ -441,9 +458,11 @@ class CharForgeHandler:
                     })
                 except Exception as e:
                     logger.warning(f"Failed to encode image {file_path}: {e}")
+                    encoding_errors.append(f"{file_path}: {e}")
 
             if not images_b64:
-                raise RuntimeError("Failed to encode any generated images")
+                error_details = "\n".join(encoding_errors) if encoding_errors else "No details available."
+                raise RuntimeError(f"Failed to encode any generated images. Errors:\n{error_details}")
 
             inference_time = time.time() - inference_start_time
 
