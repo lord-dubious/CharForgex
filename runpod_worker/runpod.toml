@@ -1,0 +1,101 @@
+# RunPod Hub Configuration for CharForgex
+[build]
+python_version = "3.10"
+cuda_version = "12.1"
+system_packages = [
+    "git",
+    "wget", 
+    "curl",
+    "libgl1-mesa-glx",
+    "libglib2.0-0",
+    "ffmpeg",
+    "libsm6",
+    "libxext6",
+    "libxrender-dev",
+    "libgtk-3-0",
+    "git-lfs"
+]
+
+python_packages = [
+    "runpod>=1.6.0",
+    "torch==2.5.1",
+    "torchvision==0.20.1", 
+    "torchaudio==2.5.1",
+    "diffusers>=0.30.0",
+    "transformers>=4.40.0",
+    "accelerate>=0.30.0",
+    "pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "opencv-python-headless>=4.8.0",
+    "requests>=2.31.0",
+    "fastapi>=0.100.0",
+    "pydantic>=2.0.0",
+    "python-multipart>=0.0.6",
+    "scikit-image>=0.21.0",
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.65.0",
+    "psutil>=5.9.0"
+]
+
+[runtime]
+handler = "worker.handler_function"
+python_executable = "python3"
+
+[runtime.environment_variables]
+PLATFORM = "serverless"
+HF_HOME = "/runpod-volume/huggingface"
+COMFYUI_PATH = "/workspace/ComfyUI"
+APP_PATH = "/workspace"
+PYTHONPATH = "/workspace"
+TORCH_CUDA_ARCH_LIST = "6.0 6.1 7.0 7.5 8.0 8.6+PTX"
+FORCE_CUDA = "1"
+
+[serverless]
+gpu_types = ["RTX A5000", "RTX A6000", "RTX 4090", "RTX 6000 Ada Generation"]
+min_workers = 0
+max_workers = 3
+idle_timeout = 300
+max_job_age = 3600
+container_disk_size_gb = 50
+volume_mount_path = "/runpod-volume"
+
+[serverless.scaling]
+requests_per_worker = 1
+scale_up_threshold = 0.8
+scale_down_threshold = 0.2
+
+[hub]
+display_name = "CharForgex - AI Character LoRA Training & Inference"
+description = "Train custom character LoRAs and generate high-quality images with Flux.1-dev. Features persistent storage, web GUI, and robust error handling."
+readme = "README.md"
+tags = ["ai", "image-generation", "lora", "flux", "character", "training", "inference"]
+category = "Image Generation"
+example_input = {
+    "operation" = "inference",
+    "character_name" = "my_character", 
+    "prompt" = "portrait of my_character, detailed face, high quality",
+    "lora_weight" = 0.73,
+    "test_dim" = 1024,
+    "batch_size" = 1
+}
+
+[hub.ports]
+8000 = "Web GUI"
+
+[hub.environment_variables]
+HF_TOKEN = {
+    description = "Hugging Face token for Flux.1-dev access",
+    required = true
+}
+CIVITAI_API_KEY = {
+    description = "CivitAI API key for model downloads", 
+    required = true
+}
+GOOGLE_API_KEY = {
+    description = "Google GenAI API key for character sheet generation",
+    required = true  
+}
+FAL_KEY = {
+    description = "FAL.ai API key for additional AI services",
+    required = true
+}

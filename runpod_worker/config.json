@@ -1,0 +1,105 @@
+{
+  "runpod_template": {
+    "name": "CharForgex Worker",
+    "imageName": "your-registry/charforgex-runpod:latest",
+    "dockerArgs": "",
+    "containerDiskInGb": 50,
+    "volumeInGb": 200,
+    "volumeMountPath": "/runpod-volume",
+    "ports": "8000/http",
+    "env": [
+      {
+        "key": "PLATFORM",
+        "value": "serverless"
+      },
+      {
+        "key": "HF_HOME",
+        "value": "/runpod-volume/huggingface"
+      },
+      {
+        "key": "COMFYUI_PATH",
+        "value": "/workspace/ComfyUI"
+      },
+      {
+        "key": "APP_PATH",
+        "value": "/workspace"
+      },
+      {
+        "key": "PYTHONPATH",
+        "value": "/workspace"
+      }
+    ],
+    "startJupyter": false,
+    "startSsh": false
+  },
+  "runpod_endpoint": {
+    "name": "CharForgex",
+    "gpu_ids": "NVIDIA RTX A5000,NVIDIA RTX A6000,NVIDIA GeForce RTX 4090,NVIDIA RTX 6000 Ada Generation",
+    "locations": "US,EU",
+    "idle_timeout": 5,
+    "max_workers": 3,
+    "flashboot": true,
+    "network_volume_id": null,
+    "env": {
+      "HF_TOKEN": "${HF_TOKEN}",
+      "CIVITAI_API_KEY": "${CIVITAI_API_KEY}",
+      "GOOGLE_API_KEY": "${GOOGLE_API_KEY}",
+      "FAL_KEY": "${FAL_KEY}"
+    }
+  },
+  "deployment_settings": {
+    "recommended_gpu_memory_gb": 48,
+    "minimum_gpu_memory_gb": 24,
+    "container_disk_gb": 50,
+    "network_volume_gb": 200,
+    "max_training_time_minutes": 60,
+    "max_inference_time_minutes": 5,
+    "supported_image_formats": ["jpg", "jpeg", "png", "webp"],
+    "max_image_size_mb": 10,
+    "max_batch_size": 4,
+    "default_training_steps": 800,
+    "default_inference_steps": 30
+  },
+  "api_operations": {
+    "health_check": {
+      "description": "Check worker health and system status",
+      "method": "POST",
+      "endpoint": "/runsync",
+      "timeout_seconds": 30
+    },
+    "training": {
+      "description": "Train a new character LoRA",
+      "method": "POST", 
+      "endpoint": "/run",
+      "timeout_minutes": 60,
+      "required_fields": ["character_name", "input_image"],
+      "optional_fields": ["steps", "learning_rate", "rank_dim", "pulidflux_images"]
+    },
+    "inference": {
+      "description": "Generate images with trained character",
+      "method": "POST",
+      "endpoint": "/runsync", 
+      "timeout_minutes": 5,
+      "required_fields": ["character_name", "prompt"],
+      "optional_fields": ["lora_weight", "test_dim", "batch_size", "num_inference_steps", "face_enhance"]
+    },
+    "list_characters": {
+      "description": "List all trained characters",
+      "method": "POST",
+      "endpoint": "/runsync",
+      "timeout_seconds": 30
+    },
+    "system_status": {
+      "description": "Get detailed system status",
+      "method": "POST", 
+      "endpoint": "/runsync",
+      "timeout_seconds": 30
+    },
+    "clear_cache": {
+      "description": "Clear temporary files and GPU memory",
+      "method": "POST",
+      "endpoint": "/runsync", 
+      "timeout_seconds": 60
+    }
+  }
+}

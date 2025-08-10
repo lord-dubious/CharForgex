@@ -26,6 +26,30 @@ CharForge is a powerful, automated pipeline for creating high-quality character 
 
 ## Installation
 
+### 🌟 **NEW: RunPod Cloud Deployment**
+
+Deploy CharForgex as a scalable cloud service with RunPod:
+
+```bash
+# Quick deployment to RunPod
+cd runpod_worker
+./setup_runpod.sh
+python deploy_to_runpod.py --registry your-registry.com/username
+```
+
+**Benefits:**
+- ✅ **No Local GPU Required** - Use powerful cloud GPUs
+- ✅ **Automatic Scaling** - Pay only for what you use
+- ✅ **Persistent Storage** - LoRAs and datasets survive restarts
+- ✅ **Web GUI Included** - Easy-to-use interface
+- ✅ **API Access** - Integrate with your applications
+
+👉 **[Complete RunPod Deployment Guide](runpod_worker/RUNPOD_DEPLOYMENT.md)**
+
+---
+
+### 🖥️ **Local Installation**
+
 ### Prerequisites
 *   Python 3.10 or higher
 *   GPU with at least 48GB VRAM
@@ -34,17 +58,19 @@ CharForge is a powerful, automated pipeline for creating high-quality character 
 
 ### Setup
 
-1.
-    cd CharForge
+1. Clone and enter directory:
+    ```bash
+    git clone https://github.com/your-username/CharForgex
+    cd CharForgex
     ```
 
 2.  Set these API keys and variables in your `.env` and add funds where appropriate:
     ```bash
-    HF_TOKEN
-    HF_HOME
-    CIVITAI_API_KEY
-    GOOGLE_API_KEY
-    FAL_KEY
+    HF_TOKEN=your_huggingface_token
+    HF_HOME=/path/to/huggingface/cache
+    CIVITAI_API_KEY=your_civitai_key
+    GOOGLE_API_KEY=your_google_genai_key
+    FAL_KEY=your_fal_ai_key
     ```
 
 3.  Log into Hugging Face and accept their terms of service to download [Flux.1-dev](https://huggingface.co/black-forest-labs/FLUX.1-dev)
@@ -82,6 +108,29 @@ CharForge is a powerful, automated pipeline for creating high-quality character 
     `source .venv/bin/activate`
 
 ## Usage
+
+### 🌐 **RunPod Cloud Usage**
+
+If you deployed to RunPod, use the web GUI or Python client:
+
+```python
+# Python client example
+from runpod_worker.client_example import CharForgexClient
+
+client = CharForgexClient("your_endpoint_id", "your_api_key")
+
+# Train a character
+client.train_character("my_character", "reference.jpg")
+
+# Generate images
+images = client.generate_images("my_character", "portrait, detailed face")
+```
+
+**Web GUI**: Access at your RunPod endpoint URL + `:8000`
+
+---
+
+### 🖥️ **Local Usage**
 
 ### 1. Train a Character LoRA
 
