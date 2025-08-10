@@ -312,11 +312,16 @@ async def run_training_background(
     user_id: int
 ):
     """Background task to run training."""
-    db = next(get_db())
-    
+    from app.core.database import SessionLocal
+
+    db = SessionLocal()
+
     try:
         # Update session status
         session = db.query(TrainingSession).filter(TrainingSession.id == session_id).first()
+        if not session:
+            return  # Session not found, exit gracefully
+
         session.status = "running"
         session.started_at = datetime.utcnow()
         db.commit()

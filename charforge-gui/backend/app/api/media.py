@@ -142,6 +142,15 @@ async def upload_file(
             detail=f"Failed to save file: {str(e)}"
         ) from e
 
+    # Save original filename metadata
+    meta_path = file_path.with_suffix(file_path.suffix + ".meta")
+    try:
+        with open(meta_path, "w", encoding="utf-8") as meta_file:
+            meta_file.write(file.filename)
+    except Exception:
+        # If metadata save fails, continue (not critical)
+        pass
+
     # Validate file content for security (read first chunk for validation)
     with open(file_path, "rb") as f:
         first_chunk = f.read(8192)

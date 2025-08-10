@@ -36,8 +36,12 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => {
     // If auth is disabled, always return true
     if (!authEnabled.value) return true
-    return !!token.value && !!user.value
+    // isAuthenticated is true if a token exists, regardless of user data loading state
+    return !!token.value
   })
+
+  // isAuthLoading is true if token exists but user data is not yet loaded
+  const isAuthLoading = computed(() => !!token.value && !user.value)
   
   // Actions
   const checkAuthEnabled = async () => {
@@ -161,6 +165,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Getters
     isAuthenticated,
+    isAuthLoading,
 
     // Actions
     initializeAuth,
