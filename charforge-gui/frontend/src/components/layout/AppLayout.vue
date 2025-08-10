@@ -37,7 +37,7 @@
           
           <div class="flex items-center space-x-4">
             <!-- User menu (only show when auth is enabled) -->
-            <div v-if="authStore.authEnabled" class="relative">
+            <div v-if="authStore.authEnabled" class="relative" ref="userMenuRef">
               <Button @click="showUserMenu = !showUserMenu" variant="ghost" size="sm">
                 <User class="h-4 w-4 mr-2" />
                 {{ authStore.user?.username }}
@@ -83,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -102,6 +102,34 @@ import Button from '@/components/ui/Button.vue'
 const route = useRoute()
 const authStore = useAuthStore()
 const showUserMenu = ref(false)
+const userMenuRef = ref<HTMLElement | null>(null)
+
+// Handle click outside to close menu
+function handleClickOutside(event: MouseEvent) {
+  if (
+    showUserMenu.value &&
+    userMenuRef.value &&
+    !userMenuRef.value.contains(event.target as Node)
+  ) {
+    showUserMenu.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleClickOutside)
+})
+
+// Close menu on route change
+watch(
+  () => route.fullPath,
+  () => {
+    showUserMenu.value = false
+  }
+)
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, tourId: 'dashboard-link' },

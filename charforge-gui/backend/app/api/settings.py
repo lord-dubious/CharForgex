@@ -136,11 +136,28 @@ async def save_environment_settings(
     
     for key, value in env_vars.items():
         if value is not None:  # Only save non-None values
+            # Validate environment variable values
+            if not isinstance(value, str):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid value type for {key}: must be string"
+                )
+
+            # Basic sanitization - remove control characters
+            sanitized_value = ''.join(char for char in value if ord(char) >= 32 or char in '\t\n\r')
+
+            # Length validation
+            if len(sanitized_value) > 10000:  # Reasonable limit
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Value for {key} is too long (max 10000 characters)"
+                )
+
             is_sensitive = key in SENSITIVE_KEYS
             await save_user_setting(
                 user_id=current_user.id,
                 key=key,
-                value=value,
+                value=sanitized_value,
                 is_sensitive=is_sensitive,
                 db=db
             )
@@ -200,8 +217,12 @@ async def test_environment_settings(
         try:
             from google import genai
             client = genai.Client(api_key=google_key)
-            # Simple test - this might need adjustment based on actual API
-            results['GOOGLE_API_KEY'] = {'valid': True, 'message': 'Key format valid'}
+            # Make a minimal API call to verify the key
+            try:
+                models = list(client.list_models())
+                results['GOOGLE_API_KEY'] = {'valid': True, 'message': 'Key is valid'}
+            except Exception as api_exc:
+                results['GOOGLE_API_KEY'] = {'valid': False, 'message': f'API call failed: {api_exc}'}
         except Exception as e:
             results['GOOGLE_API_KEY'] = {'valid': False, 'message': str(e)}
     else:

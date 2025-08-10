@@ -479,6 +479,9 @@ class CharForgeIntegration:
             work_dir = self.scratch_dir / character_name
         else:
             work_dir = Path(work_dir)
+            # Validate work_dir to prevent directory traversal
+            if not self._is_safe_path(work_dir):
+                raise ValueError(f"Invalid work directory path: {work_dir}")
         
         info = {
             "name": character_name,

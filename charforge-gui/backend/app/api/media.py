@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+
 from pydantic import BaseModel
 from typing import List, Optional
 import os
-import shutil
+
 from pathlib import Path
 import uuid
 from PIL import Image
 
-from app.core.database import get_db, User
+from app.core.database import User
 from app.core.auth import get_current_active_user, get_current_user_optional
 from app.core.config import settings
 
