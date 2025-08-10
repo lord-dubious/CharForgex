@@ -38,7 +38,7 @@ python_packages = [
 ]
 
 [runtime]
-handler = "worker.handler_function"
+handler = "worker.handler"
 python_executable = "python3"
 
 [runtime.environment_variables]

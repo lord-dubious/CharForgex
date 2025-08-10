@@ -198,12 +198,12 @@ MAX_BATCH_SIZE=4            # Maximum batch size for inference
 ```bash
 # Check worker health
 curl -X POST https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer $RUNPOD_API_KEY" \
   -d '{"input": {"operation": "system_status"}}'
 
 # List available characters
 curl -X POST https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer $RUNPOD_API_KEY" \
   -d '{"input": {"operation": "list_characters"}}'
 ```
 

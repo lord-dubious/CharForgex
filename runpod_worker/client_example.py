@@ -211,15 +211,19 @@ class CharForgexClient:
                 elif status in ['IN_QUEUE', 'IN_PROGRESS']:
                     elapsed_minutes = (attempt + 1) * 0.5
                     print(f"⏳ Training in progress... {elapsed_minutes:.1f} minutes elapsed")
-                    time.sleep(30)  # Wait 30 seconds
+                    # Use exponential backoff for polling
+                    poll_interval = min(30 + attempt * 5, 120)  # 30s to 2min max
+                    time.sleep(poll_interval)
                 else:
                     print(f"🔄 Status: {status}")
                     time.sleep(30)
-                    
+
             except requests.RequestException as e:
                 if attempt == max_attempts - 1:
                     raise Exception(f"Failed to check job status: {e}")
-                time.sleep(5)  # Wait before retry
+                # Exponential backoff on error
+                error_wait = min(5 * (2 ** (attempt % 4)), 60)  # 5s to 60s max
+                time.sleep(error_wait)
         
         raise Exception(f"Training timed out after {max_wait_minutes} minutes")
 

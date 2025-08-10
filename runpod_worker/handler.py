@@ -158,6 +158,10 @@ class CharForgeHandler:
         character_name = None
 
         try:
+            # Validate input parameters
+            if not isinstance(job_input, dict):
+                raise ValueError("job_input must be a dictionary")
+
             # Load CharForgex imports when needed
             _load_charforgex_imports()
 
@@ -331,6 +335,10 @@ class CharForgeHandler:
         character_name = None
 
         try:
+            # Validate input parameters
+            if not isinstance(job_input, dict):
+                raise ValueError("job_input must be a dictionary")
+
             # Load CharForgex imports when needed
             _load_charforgex_imports()
 

@@ -149,6 +149,16 @@ HEALTHCHECK --interval=60s --timeout=30s --start-period=10m --retries=3 \
         python -c "import requests; import sys; response = requests.get('http://localhost:8000', timeout=10); sys.exit(0 if response.status_code == 200 else 1)" || \
         python -c "import runpod_worker.utils; exit(0)" || exit 1
 
+# Create non-root user for security
+RUN useradd -m -u 1000 runpod && \
+    mkdir -p /runpod-volume && \
+    chown -R runpod:runpod /workspace && \
+    chmod -R 755 /workspace
+
+# Note: Don't change ownership of /runpod-volume as it may be mounted
+# Switch to non-root user
+USER runpod
+
 # Expose ports
 EXPOSE 8000
 

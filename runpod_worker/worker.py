@@ -71,11 +71,19 @@ def handler(job):
     start_time = time.time()
 
     try:
+        # Validate job input
+        if not isinstance(job, dict):
+            raise ValueError("Job must be a dictionary")
+
         # Ensure required directories exist
         ensure_directories()
 
         # Extract input from job - RunPod passes job with 'input' key
         job_input = job.get("input", {})
+
+        # Validate job_input
+        if not isinstance(job_input, dict):
+            raise ValueError("Job input must be a dictionary")
 
         # Default operation for backward compatibility
         operation = job_input.get("operation", "inference")
@@ -175,9 +183,7 @@ def main():
     # Start RunPod serverless worker - CORRECTED to match documentation
     logger.info("🌟 Starting RunPod serverless worker...")
 
-    runpod.serverless.start({
-        "handler": handler
-    })
+    runpod.serverless.start(handler)
 
 if __name__ == "__main__":
     main()

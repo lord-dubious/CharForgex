@@ -30,13 +30,17 @@ logger = logging.getLogger(__name__)
 def get_persistent_path(subpath: str = "") -> str:
     """
     Get path in persistent storage (network volume)
-    
+
     Args:
         subpath: Subdirectory path
-        
+
     Returns:
         Full path in persistent storage
     """
+    # Validate subpath to prevent directory traversal
+    if subpath and ('..' in subpath or subpath.startswith('/') or subpath.startswith('\\')):
+        raise ValueError("Invalid subpath: directory traversal not allowed")
+
     base_path = "/runpod-volume"
     if subpath:
         return os.path.join(base_path, subpath)

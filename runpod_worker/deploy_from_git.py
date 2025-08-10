@@ -39,11 +39,15 @@ def print_info(message: str):
 def run_command(cmd: str, check: bool = True, capture_output: bool = True) -> subprocess.CompletedProcess:
     """Run command with comprehensive error handling"""
     print_info(f"Running: {cmd}")
-    
+
     try:
+        # Split command for security (avoid shell=True)
+        import shlex
+        cmd_args = shlex.split(cmd)
+
         result = subprocess.run(
-            cmd, 
-            shell=True, 
+            cmd_args,
+            shell=False,
             capture_output=capture_output,
             text=True,
             timeout=300  # 5 minute timeout
