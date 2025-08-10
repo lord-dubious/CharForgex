@@ -100,14 +100,10 @@ async def get_all_settings(
     settings = await get_user_settings(current_user.id, db)
     
     # Format response with sensitivity info
-    formatted_settings = {}
-    for key, value in settings.items():
-        formatted_settings[key] = {
-            "value": value,
-            "is_sensitive": key in SENSITIVE_KEYS
-        }
-    
-    return formatted_settings
+    return {
+        key: {"value": value, "is_sensitive": key in SENSITIVE_KEYS}
+        for key, value in settings.items()
+    }
 
 @router.delete("/setting/{key}")
 async def delete_setting(

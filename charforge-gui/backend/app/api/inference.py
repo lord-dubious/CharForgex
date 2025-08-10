@@ -122,11 +122,16 @@ async def run_inference_background(
     user_id: int
 ):
     """Background task to run inference."""
-    db = next(get_db())
-    
+    from app.core.database import SessionLocal
+
+    db = SessionLocal()
+
     try:
         # Update job status
         job = db.query(InferenceJob).filter(InferenceJob.id == job_id).first()
+        if not job:
+            return  # Job not found, exit gracefully
+
         job.status = "running"
         db.commit()
         
@@ -174,10 +179,11 @@ async def run_inference_background(
     except Exception as e:
         # Handle errors
         job = db.query(InferenceJob).filter(InferenceJob.id == job_id).first()
-        job.status = "failed"
-        job.completed_at = datetime.utcnow()
-        db.commit()
-    
+        if job:  # Only update if job exists
+            job.status = "failed"
+            job.completed_at = datetime.utcnow()
+            db.commit()
+
     finally:
         db.close()
 

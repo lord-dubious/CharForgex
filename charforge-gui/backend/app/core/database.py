@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, Float
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, Float, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
@@ -71,7 +71,7 @@ class InferenceJob(Base):
     safety_check = Column(Boolean, default=True)
     face_enhance = Column(Boolean, default=False)
     status = Column(String, default="pending")  # pending, running, completed, failed
-    output_paths = Column(Text, nullable=True)  # JSON array of file paths
+    output_paths = Column(JSON, nullable=True)  # JSON array of file paths
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
 
@@ -83,7 +83,7 @@ class AppSettings(Base):
     key = Column(String, nullable=False)
     value = Column(Text, nullable=True)
     is_encrypted = Column(Boolean, default=False)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Dataset(Base):
     __tablename__ = "datasets"
